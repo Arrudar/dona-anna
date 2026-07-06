@@ -16,6 +16,9 @@ Um **campo minado** de fliperama com estética **grunge 2.5D** (vibe Street Figh
 - No fim aparecem os **TOP 3** e o resultado/posição da sua partida
 - Controles de **🔊 Som On/Off**, **🎵 Música On/Off** e volume **+/−** no menu
 
+## Acesso
+O jogo é protegido por uma **senha da família** (portão na tela inicial). É um cadeado leve, client-side — mantém o jogo restrito a quem tem o convite. A senha não fica em texto no código (apenas o hash).
+
 ## Como rodar
 Abra o arquivo direto no navegador:
 ```

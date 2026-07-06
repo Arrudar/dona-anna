@@ -293,6 +293,17 @@
   .mini-rank .mr-nm{font-weight:bold;} .mini-rank .mr-dv{font-size:10px;color:#a3906c;}
   .mini-rank .mr-sc{text-align:right;color:#8fd06a;font-weight:bold;}
 
+  /* ---- portão de senha ---- */
+  #gate{display:none;position:fixed;inset:0;z-index:10010;
+    background:radial-gradient(120% 90% at 50% -10%, #3a2614 0%, #1a120a 55%, #0a0603 100%);
+    align-items:center;justify-content:center;padding:20px;}
+  #gateInput{font-family:inherit;font-size:20px;text-align:center;color:var(--bone);background:#0e0a06;
+    border:2px solid #4a2f16;border-radius:6px;padding:12px 14px;width:100%;max-width:260px;outline:none;letter-spacing:4px;}
+  #gateInput:focus{border-color:var(--amber);}
+  #gateInput::placeholder{color:#5a4a30;letter-spacing:6px;}
+  .gate-err{color:#ff6b5e;font-family:Georgia,serif;font-style:italic;font-size:13px;min-height:20px;margin:8px 0 2px;}
+  .shake-panel{animation:shake .4s ease;}
+
   /* ---- pop-up de nome obrigatório ---- */
   #namePopup{display:none;position:fixed;inset:0;z-index:10002;background:rgba(6,4,2,.9);
     align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s ease;}
@@ -452,6 +463,20 @@
       <div id="rankList" class="ranklist"></div>
       <div class="panel-actions" style="margin-top:14px;">
         <button class="btn" id="rankClose">VOLTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PORTÃO DE SENHA (jardim particular) ===================== -->
+  <div id="gate">
+    <div class="panel">
+      <span class="big-emoji">🔒🌷</span>
+      <h2 class="win" style="font-size:24px;">JARDIM PARTICULAR</h2>
+      <p class="quip">O passeio da Dona Anna é só pra quem tem convite. Digite a senha da família:</p>
+      <input id="gateInput" type="password" placeholder="• • • • • •" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div id="gateErr" class="gate-err"></div>
+      <div class="panel-actions" style="margin-top:8px;">
+        <button class="btn" id="gateOk">▶ ENTRAR NO JARDIM</button>
       </div>
     </div>
   </div>
@@ -1192,6 +1217,38 @@ $('#rankClose').onclick = ()=>{ S.click(); $('#rankOverlay').style.display='none
 
 boardEl.addEventListener('contextmenu', e=>e.preventDefault());
 
+// ============================================================
+//  PORTÃO DE SENHA (cadeado leve, client-side; guarda só o hash)
+// ============================================================
+const GATE_SHA = '46673d9eab9a5b8f3ef61466a4bb44c4c725aa55092cbc2547343965bb8d2d93';
+const GATE_FB  = 'x5158e4d3'; // fallback se crypto.subtle indisponível
+const gate=$('#gate'), gateInput=$('#gateInput'), gateOk=$('#gateOk'), gateErr=$('#gateErr');
+async function hashPass(s){
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h=5381; for(let i=0;i<s.length;i++){ h=((h<<5)+h)+s.charCodeAt(i); h|=0; } return 'x'+(h>>>0).toString(16);
+  }
+}
+function gatePassed(){ return LS.get('donaAnna_gate')==='1'; }
+function showGate(){ gate.style.display='flex'; setTimeout(()=>{ try{gateInput.focus();}catch(e){} },60); }
+async function tryGate(){
+  const h = await hashPass(gateInput.value.trim());
+  if(h===GATE_SHA || h===GATE_FB){
+    LS.set('donaAnna_gate','1');
+    gate.style.display='none';
+    openNamePopup();
+  }else{
+    gateErr.textContent = 'Senha errada, tente de novo. 🌰';
+    const pnl = gate.querySelector('.panel');
+    pnl.classList.add('shake-panel'); setTimeout(()=>pnl.classList.remove('shake-panel'),400);
+    gateInput.value=''; try{gateInput.focus();}catch(e){}
+  }
+}
+gateOk.onclick = ()=>{ S.click(); tryGate(); };
+gateInput.addEventListener('keydown', e=>{ if(e.key==='Enter') tryGate(); });
+
 // ---------- BOOT ----------
 (function boot(){
   soundOn = LS.get('donaAnna_sound') !== '0';
@@ -1203,7 +1260,7 @@ boardEl.addEventListener('contextmenu', e=>e.preventDefault());
   $('#musicVolVal').textContent = musicVol; Music.setVolume(musicVol/100);
   buildMenu();
   installTrowelCursor();
-  openNamePopup(); // nome é obrigatório antes de jogar
+  if(gatePassed()) openNamePopup(); else showGate(); // senha primeiro, depois o nome
 })();
 </script>
 </body>
