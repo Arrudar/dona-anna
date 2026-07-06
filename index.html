@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DONA ANNA — A Caça aos Óculos</title>
+<style>
+  /* ===================== BASE / TEMA GRUNGE FLIPERAMA ===================== */
+  :root{
+    --amber:#ffb228;
+    --amber-hot:#ffd15c;
+    --blood:#c02323;
+    --rust:#7a3b1a;
+    --dirt:#2a1e12;
+    --dirt2:#1a120a;
+    --bone:#e9dcc0;
+    --ink:#0d0906;
+    --grid-line:#000;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Arial Black","Franklin Gothic Bold",Impact,system-ui,sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #3a2614 0%, #1a120a 55%, #0a0603 100%);
+    color:var(--bone);
+    min-height:100%;
+    overflow-x:hidden;
+    -webkit-font-smoothing:none;
+    display:flex;flex-direction:column;align-items:center;
+    padding:16px;
+    user-select:none;
+  }
+  /* filtro de grão/ruído grunge por cima de tudo */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+    opacity:.06;mix-blend-mode:overlay;
+  }
+  /* vinheta escura nas bordas */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9998;
+    box-shadow:inset 0 0 220px 60px rgba(0,0,0,.85);
+  }
+
+  .arcade-title{
+    text-align:center;line-height:.92;margin:8px 0 4px;
+    letter-spacing:2px;
+  }
+  .arcade-title .l1{
+    display:block;font-size:clamp(28px,7vw,64px);
+    color:var(--amber);
+    text-shadow:
+      0 2px 0 var(--rust), 0 4px 0 var(--rust),
+      0 6px 0 #000, 0 8px 14px rgba(0,0,0,.9),
+      3px 0 0 var(--blood);
+    transform:skewX(-6deg);
+    -webkit-text-stroke:2px #000;
+  }
+  .arcade-title .l2{
+    display:block;font-size:clamp(14px,3.2vw,26px);
+    color:var(--bone);letter-spacing:6px;margin-top:6px;
+    text-shadow:0 2px 0 #000,0 0 12px rgba(255,178,40,.4);
+    transform:skewX(-6deg);
+  }
+
+  .stage{width:100%;max-width:920px;display:flex;flex-direction:column;align-items:center;}
+
+  /* ===================== BOTÕES ===================== */
+  .btn{
+    font-family:inherit;cursor:pointer;border:none;
+    color:#1a1008;
+    background:linear-gradient(180deg,var(--amber-hot),var(--amber) 55%,#b8791a);
+    padding:12px 22px;font-size:16px;letter-spacing:1px;
+    text-transform:uppercase;
+    border-radius:4px;
+    box-shadow:0 4px 0 #6e4110,0 8px 14px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,255,255,.4);
+    text-shadow:0 1px 0 rgba(255,255,255,.35);
+    transition:transform .06s ease, box-shadow .06s ease;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 0 0 #6e4110,0 3px 6px rgba(0,0,0,.6);}
+  .btn.ghost{
+    background:linear-gradient(180deg,#3a2b1c,#241811);
+    color:var(--bone);box-shadow:0 4px 0 #120b06,0 8px 14px rgba(0,0,0,.6);
+    text-shadow:0 1px 0 #000;
+  }
+  .btn.sm{padding:8px 14px;font-size:13px;}
+
+  /* ===================== MENU ===================== */
+  #menu{width:100%;max-width:720px;text-align:center;animation:fadeIn .5s ease;}
+  .story{
+    background:linear-gradient(180deg,rgba(30,20,12,.9),rgba(12,8,4,.9));
+    border:2px solid #000;border-top-color:#5a3a1c;
+    border-radius:8px;padding:18px 20px;margin:18px 0;
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:15px;line-height:1.6;color:#d9c9a6;font-weight:normal;
+    box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);
+    text-align:left;
+  }
+  .story b{color:var(--amber);}
+  .diff-title{margin:14px 0 8px;letter-spacing:3px;color:var(--amber);font-size:14px;}
+  .difficulties{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:10px;}
+  .diff{
+    flex:1 1 160px;min-width:150px;cursor:pointer;
+    background:linear-gradient(180deg,#2c1d11,#171009);
+    border:2px solid #000;border-radius:8px;padding:14px 12px;
+    box-shadow:0 6px 0 #0c0804,0 10px 18px rgba(0,0,0,.5);
+    transition:transform .1s ease, border-color .1s ease, box-shadow .1s ease;
+  }
+  .diff:hover{transform:translateY(-3px);border-color:var(--rust);}
+  .diff.active{border-color:var(--amber);box-shadow:0 6px 0 #0c0804,0 0 18px rgba(255,178,40,.5);}
+  .diff .emoji{font-size:34px;display:block;filter:drop-shadow(0 3px 3px rgba(0,0,0,.7));}
+  .diff .name{display:block;color:var(--bone);letter-spacing:1px;margin:6px 0 2px;font-size:15px;}
+  .diff .meta{display:block;font-size:11px;color:#a3906c;font-weight:normal;font-family:Georgia,serif;}
+  .menu-actions{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:6px;}
+
+  /* campos: nome + volume da música */
+  .menu-fields{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin:6px 0 14px;}
+  .fld{display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2c1d11,#171009);
+    border:2px solid #000;border-radius:8px;padding:8px 12px;box-shadow:0 4px 0 #0c0804;}
+  .fld span{font-family:Georgia,serif;font-weight:normal;font-size:12px;color:#a3906c;letter-spacing:.5px;white-space:nowrap;}
+  .fld input[type=text],.fld #playerName{
+    font-family:inherit;font-size:14px;color:var(--bone);background:#0e0a06;border:1px solid #4a2f16;
+    border-radius:4px;padding:6px 8px;width:150px;outline:none;letter-spacing:1px;}
+  .fld #playerName::placeholder{color:#6f5c3e;font-family:Georgia,serif;font-style:italic;}
+  .fld input[type=range]{width:120px;accent-color:var(--amber);cursor:pointer;}
+  .fld b{color:var(--amber);font-family:"Courier New",monospace;font-size:13px;min-width:24px;text-align:right;}
+
+  /* ===================== JOGO ===================== */
+  #game{display:none;width:100%;flex-direction:column;align-items:center;animation:fadeIn .4s ease;}
+  .hud{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    width:100%;max-width:640px;margin:6px 0 22px;
+    background:linear-gradient(180deg,#241811,#120b06);
+    border:2px solid #000;border-top-color:#4a2f16;border-radius:8px;
+    padding:10px 14px;box-shadow:0 6px 16px rgba(0,0,0,.6);
+  }
+  .counter{
+    font-family:"Courier New",monospace;font-weight:bold;
+    background:#1c0d0d;color:#ff5a3c;
+    padding:6px 10px;border-radius:4px;min-width:74px;text-align:center;
+    font-size:22px;letter-spacing:2px;
+    box-shadow:inset 0 0 8px rgba(255,60,40,.5),inset 0 0 0 2px #000;
+    text-shadow:0 0 8px rgba(255,90,60,.9);
+  }
+  .counter.time{color:#5ad1ff;box-shadow:inset 0 0 8px rgba(60,180,255,.5),inset 0 0 0 2px #000;text-shadow:0 0 8px rgba(90,200,255,.9);}
+  .face{
+    font-size:30px;cursor:pointer;line-height:1;
+    background:linear-gradient(180deg,#3a2b1c,#241811);
+    border:2px solid #000;border-radius:8px;padding:4px 8px;
+    box-shadow:0 4px 0 #120b06;transition:transform .06s ease;
+  }
+  .face:active{transform:translateY(3px);}
+
+  .board-wrap{
+    perspective:1100px;perspective-origin:50% 24%;
+    padding:10px 6px 40px;width:100%;display:flex;justify-content:center;
+  }
+  /* o tabuleiro é o JARDIM: canteiro de terra emoldurado */
+  #board{
+    display:grid;gap:3px;
+    transform:rotateX(16deg);
+    padding:14px;border-radius:10px;
+    background:
+      linear-gradient(180deg,#5a4326,#31230f);
+    border:3px solid #1a1206;
+    box-shadow:
+      0 34px 55px rgba(0,0,0,.7),
+      0 12px 0 #140d05,
+      inset 0 0 40px rgba(0,0,0,.55);
+  }
+  /* célula coberta = MOITA folhosa do jardim (textura de arbusto) */
+  .cell{
+    width:34px;height:34px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:19px;font-weight:900;cursor:pointer;
+    border-radius:4px;
+    background:
+      radial-gradient(circle at 28% 24%, rgba(230,255,200,.30) 0 2.5px, transparent 3.5px),
+      radial-gradient(circle at 72% 40%, rgba(0,0,0,.16) 0 3px, transparent 4px),
+      radial-gradient(circle at 55% 74%, rgba(0,0,0,.14) 0 3px, transparent 4px),
+      radial-gradient(circle at 42% 55%, #56a038 0 30%, transparent 55%),
+      linear-gradient(160deg,#77bd4f,#4f9235 58%,#3a6f28);
+    box-shadow:
+      inset 2px 2px 0 rgba(205,255,175,.5),
+      inset -2px -2px 0 rgba(0,0,0,.35),
+      0 3px 0 #24521a;
+    transition:transform .05s ease, box-shadow .08s ease, background .15s ease;
+    color:#123;
+    position:relative;
+  }
+  .cell:hover:not(.open):not(.flag){filter:brightness(1.12);}
+  /* florzinha decorativa em algumas moitas (não é perigo) */
+  .cell .deco{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:16px;pointer-events:none;opacity:.72;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
+  }
+  /* célula revelada = TERRA fofa com pedrinhas e pétalas caídas */
+  .cell.open{
+    cursor:default;
+    background:
+      radial-gradient(circle at 78% 22%, rgba(200,80,120,.12) 0 2.5px, transparent 3.5px),
+      radial-gradient(circle at 24% 74%, rgba(90,55,20,.22) 0 2px, transparent 3px),
+      radial-gradient(circle at 60% 60%, rgba(90,55,20,.14) 0 2px, transparent 3px),
+      radial-gradient(circle at 40% 30%, rgba(255,200,80,.10) 0 2px, transparent 3px),
+      linear-gradient(160deg,#dcc59a,#c2a870 100%);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.28), inset 0 2px 6px rgba(90,60,20,.35);
+    color:#2a1c0c;
+  }
+  .cell.flag{filter:saturate(1.2);}
+  .cell.boom{
+    background:radial-gradient(circle,#ff7a2a,#c02323 70%);
+    box-shadow:0 0 18px 4px rgba(255,90,30,.8),inset 0 0 0 2px #000;
+    animation:shake .4s ease;
+  }
+  .cell.wrongflag{background:linear-gradient(160deg,#6b3030,#3a1414);}
+  /* números clássicos, escuros e fortes sobre a terra clara */
+  .n1{color:#1f5fd0;} .n2{color:#1f7a2e;} .n3{color:#c0271f;}
+  .n4{color:#6a1fb0;} .n5{color:#8a3d10;} .n6{color:#12868a;}
+  .n7{color:#111;} .n8{color:#555;}
+  .cell.open span{font-size:22px;font-weight:900;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.45);}
+
+  .hint{margin-top:2px;font-size:12px;color:#9c8862;font-family:Georgia,serif;font-weight:normal;letter-spacing:.5px;}
+  .best{font-size:12px;color:#a3906c;font-family:Georgia,serif;font-weight:normal;margin-top:2px;}
+
+  /* ===================== OVERLAY FIM ===================== */
+  #overlay{
+    display:none;position:fixed;inset:0;z-index:10000;
+    background:rgba(6,4,2,.82);
+    align-items:center;justify-content:center;padding:20px;
+    animation:fadeIn .3s ease;
+  }
+  .panel{
+    max-width:460px;width:100%;text-align:center;
+    background:linear-gradient(180deg,#2a1c10,#140d07);
+    border:3px solid #000;border-top-color:#5a3a1c;border-radius:12px;
+    padding:26px 24px 22px;
+    box-shadow:0 30px 70px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .panel .big-emoji{font-size:72px;display:block;filter:drop-shadow(0 6px 6px rgba(0,0,0,.7));animation:pop .5s ease;}
+  .panel h2{
+    font-size:30px;margin:8px 0 6px;letter-spacing:2px;
+    transform:skewX(-5deg);-webkit-text-stroke:1.5px #000;
+  }
+  .panel h2.win{color:var(--amber);text-shadow:0 3px 0 var(--rust),0 0 16px rgba(255,178,40,.6);}
+  .panel h2.lose{color:var(--blood);text-shadow:0 3px 0 #000,0 0 16px rgba(192,35,35,.6);}
+  .panel .quip{
+    font-family:Georgia,serif;font-weight:normal;font-size:16px;line-height:1.5;
+    color:#d9c9a6;margin:6px 0 18px;font-style:italic;
+  }
+  .panel .stat{font-size:13px;color:#a3906c;font-family:Georgia,serif;font-weight:normal;margin-bottom:16px;}
+  .panel-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+  .credits{margin-top:18px;font-size:11px;color:#6f5c3e;font-family:Georgia,serif;font-weight:normal;letter-spacing:1px;text-align:center;}
+
+  /* ===================== RANKING ===================== */
+  #rankOverlay{
+    display:none;position:fixed;inset:0;z-index:10001;
+    background:rgba(6,4,2,.82);align-items:center;justify-content:center;padding:20px;
+    animation:fadeIn .3s ease;
+  }
+  #rankOverlay .panel{max-width:520px;}
+  .rank-head,.rank-row{display:grid;grid-template-columns:30px 1fr 72px 1.05fr 56px;gap:6px;align-items:center;
+    font-family:Georgia,serif;font-weight:normal;font-size:12px;padding:5px 8px;text-align:left;}
+  .rank-head{color:#8a7550;border-bottom:1px solid #4a2f16;letter-spacing:1px;text-transform:uppercase;font-size:10px;}
+  .ranklist{max-height:320px;overflow-y:auto;margin-top:4px;}
+  .rank-row{color:#d9c9a6;border-bottom:1px solid rgba(90,58,28,.3);}
+  .rank-row:nth-child(1){color:var(--amber);font-weight:bold;}
+  .rank-row .pos{font-weight:bold;color:var(--amber);}
+  .rank-row .sc,.rank-head .sc{color:#8fd06a;font-weight:bold;text-align:right;}
+  .rank-row .dt,.rank-head .dt{font-size:11px;color:#a3906c;}
+  .rank-row .dv{font-size:11px;color:#a3906c;}
+  .rank-empty{color:#a3906c;font-family:Georgia,serif;font-style:italic;padding:20px;}
+
+  /* ---- controles de volume (+/−) ---- */
+  .volctl{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2c1d11,#171009);
+    border:2px solid #000;border-radius:8px;padding:5px 12px;box-shadow:0 4px 0 #0c0804;}
+  .volctl .vlbl{font-size:15px;}
+  .volctl b{color:var(--amber);font-family:"Courier New",monospace;font-size:14px;min-width:30px;text-align:center;}
+  .volbtn{font-family:inherit;cursor:pointer;border:2px solid #000;border-radius:6px;width:30px;height:30px;
+    font-size:18px;line-height:1;color:#1a1008;background:linear-gradient(180deg,var(--amber-hot),var(--amber));box-shadow:0 3px 0 #6e4110;}
+  .volbtn:active{transform:translateY(3px);box-shadow:0 0 0 #6e4110;}
+
+  /* ---- resultado da partida + top 3 no overlay de fim ---- */
+  #endResult{font-size:15px;color:#d9c9a6;margin-bottom:2px;}
+  .mini-detail{font-family:Georgia,serif;font-size:11px;color:#8a7550;margin:2px 0 12px;}
+  .mini-rank{background:rgba(0,0,0,.28);border:1px solid #3a2716;border-radius:8px;padding:8px 10px;margin-bottom:16px;text-align:left;}
+  .mini-rank .mr-title{font-size:11px;letter-spacing:2px;color:var(--amber);margin-bottom:6px;text-align:center;}
+  .mini-rank .mr-row{display:grid;grid-template-columns:26px 1fr 1fr 56px;gap:6px;align-items:center;
+    font-family:Georgia,serif;font-size:12px;color:#d9c9a6;padding:3px 0;}
+  .mini-rank .mr-row:first-of-type .mr-nm{color:var(--amber);}
+  .mini-rank .mr-nm{font-weight:bold;} .mini-rank .mr-dv{font-size:10px;color:#a3906c;}
+  .mini-rank .mr-sc{text-align:right;color:#8fd06a;font-weight:bold;}
+
+  /* ---- pop-up de nome obrigatório ---- */
+  #namePopup{display:none;position:fixed;inset:0;z-index:10002;background:rgba(6,4,2,.9);
+    align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s ease;}
+  #nameInput{font-family:inherit;font-size:18px;text-align:center;color:var(--bone);background:#0e0a06;
+    border:2px solid #4a2f16;border-radius:6px;padding:10px 12px;width:100%;max-width:280px;outline:none;letter-spacing:1px;}
+  #nameInput:focus{border-color:var(--amber);}
+  #nameInput::placeholder{color:#6f5c3e;font-family:Georgia,serif;font-style:italic;font-size:15px;}
+  #nameOk:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.6);}
+
+  /* ---- bandeirinha arrastável ---- */
+  #flagPalette{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:620;
+    display:none;flex-direction:column;align-items:center;gap:4px;touch-action:none;
+    background:linear-gradient(180deg,#2c1d11,#171009);border:2px solid #000;border-radius:12px;
+    padding:10px 8px;box-shadow:0 8px 18px rgba(0,0,0,.6);}
+  #flagSrc{font-size:36px;cursor:grab;touch-action:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));
+    animation:flagWave 1.6s ease-in-out infinite;}
+  #flagSrc:active{cursor:grabbing;}
+  #flagPalette .flag-hint{font-family:Georgia,serif;font-size:10px;color:#a3906c;text-align:center;line-height:1.2;}
+  @keyframes flagWave{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
+  #dragFlag{position:fixed;left:0;top:0;font-size:36px;pointer-events:none;z-index:10005;display:none;
+    transform:translate(-100px,-100px);filter:drop-shadow(0 3px 4px rgba(0,0,0,.7));}
+
+  /* ===================== CENA DE CONSEQUÊNCIA (derrota) ===================== */
+  .scene{margin:2px 0 12px;}
+  .scene .art{font-size:38px;letter-spacing:1px;line-height:1.1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6));animation:pop .5s ease;}
+  .scene .cap{font-family:Georgia,serif;font-weight:normal;font-style:italic;font-size:13px;color:#c9b48c;margin-top:6px;}
+
+  /* ===================== AVATAR DONA ANNA (caminha pelo jardim) ===================== */
+  #annaLayer{position:fixed;left:0;top:0;width:0;height:0;z-index:600;pointer-events:none;}
+  #anna{
+    position:fixed;left:0;top:0;width:46px;height:46px;
+    transform:translate(-120px,-120px);
+    transition:transform .5s cubic-bezier(.34,.02,.28,1);
+    display:flex;align-items:flex-end;justify-content:center;
+    will-change:transform;
+  }
+  #anna .body{font-size:36px;line-height:1;display:inline-block;filter:drop-shadow(0 5px 3px rgba(0,0,0,.55));
+    animation:annaIdle 1.7s ease-in-out infinite;}
+  #anna.walking .body{animation:annaWalk .26s ease-in-out infinite;}
+  /* parada: balança a cabeça de leve, olhando em volta */
+  @keyframes annaIdle{
+    0%,100%{transform:translateY(0) rotate(-3deg);}
+    25%{transform:translateY(-2px) rotate(2deg);}
+    50%{transform:translateY(0) rotate(3deg);}
+    75%{transform:translateY(-2px) rotate(-2deg);}
+  }
+  @keyframes annaWalk{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-6px) rotate(5deg);}}
+  #annaShadow{
+    position:fixed;left:0;top:0;width:34px;height:12px;margin:-6px 0 0 6px;
+    background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%);
+    transform:translate(-120px,-120px);
+    transition:transform .5s cubic-bezier(.34,.02,.28,1);
+  }
+  #annaBubble{
+    position:fixed;left:0;top:0;transform:translate(-120px,-160px);
+    transition:transform .5s cubic-bezier(.34,.02,.28,1), opacity .2s ease;
+    background:#fff;color:#1a1008;font-family:Georgia,serif;font-weight:bold;font-size:13px;
+    padding:5px 11px;border-radius:12px;white-space:nowrap;
+    box-shadow:0 4px 10px rgba(0,0,0,.5);opacity:0;border:2px solid #1a1008;
+  }
+  #annaBubble::after{content:'';position:absolute;bottom:-8px;left:14px;border:7px solid transparent;border-top-color:#1a1008;}
+  #annaBubble.show{opacity:1;}
+
+  /* ===================== ANIMAÇÕES ===================== */
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  @keyframes pop{0%{transform:scale(0);}70%{transform:scale(1.25);}100%{transform:scale(1);}}
+  @keyframes shake{0%,100%{transform:translate(0,0);}20%{transform:translate(-3px,2px);}40%{transform:translate(3px,-2px);}60%{transform:translate(-2px,-2px);}80%{transform:translate(2px,2px);}}
+  .screen-shake{animation:screenShake .4s ease;}
+  @keyframes screenShake{0%,100%{transform:none;}25%{transform:translate(-5px,3px) rotate(-.3deg);}50%{transform:translate(5px,-3px) rotate(.3deg);}75%{transform:translate(-3px,-4px);}}
+
+  @media (max-width:520px){
+    .cell{width:26px;height:26px;font-size:15px;}
+    .cell.open span{font-size:17px;}
+    #board{transform:rotateX(12deg);}
+  }
+</style>
+</head>
+<body>
+
+  <h1 class="arcade-title">
+    <span class="l1">DONA ANNA</span>
+    <span class="l2">A CAÇA AOS ÓCULOS</span>
+  </h1>
+
+  <div class="stage">
+
+    <!-- ===================== MENU ===================== -->
+    <div id="menu">
+      <div class="story">
+        Dona <b>Anna</b>, <b>96 primaveras recém-completadas</b>, só quer uma coisa: <b>passear pelo jardim da fazenda
+        que tanto ama</b>. Mas tem um problema — sem os óculos ela não enxerga um palmo, e o jardim virou um campo
+        minado de perigos: uma <b>cobra</b> entre as roseiras, aquela <b>escada escorregadia</b>, o <b>fisioterapeuta</b>
+        que ela evita a todo custo, e a pior de todas — a <b>vizinha chata</b> pronta pra um papo de 3 horas. Revele o
+        caminho com cuidado, marque as ciladas e ache os óculos pra enfim curtir o passeio.
+        <br><br><i>(Spoiler: os óculos quase sempre estão na cabeça. Mas isso é problema seu.)</i>
+      </div>
+
+      <div class="menu-fields">
+        <button class="btn ghost sm" id="soundToggle">🔊 SOM: ON</button>
+        <button class="btn ghost sm" id="musicToggle">🎵 MÚSICA: ON</button>
+        <span class="volctl"><span class="vlbl">🔈</span><button class="volbtn" id="volDown">−</button><b id="musicVolVal">45</b><button class="volbtn" id="volUp">+</button></span>
+      </div>
+
+      <div class="diff-title">▸ ESCOLHA O DIA ◂</div>
+      <div class="difficulties" id="difficulties"></div>
+
+      <div class="menu-actions">
+        <button class="btn" id="startBtn">▶ COMEÇAR</button>
+        <button class="btn ghost sm" id="rankBtn">🏆 RANKING</button>
+        <button class="btn ghost sm" id="nameChange">✎ TROCAR NOME</button>
+      </div>
+    </div>
+
+    <!-- ===================== JOGO ===================== -->
+    <div id="game">
+      <div class="hud">
+        <div class="counter" id="mineCount" title="Perigos restantes">🐍 000</div>
+        <div class="face" id="faceBtn" title="Reiniciar">👵</div>
+        <div class="counter time" id="timer" title="Tempo">000</div>
+      </div>
+      <div class="board-wrap">
+        <div id="board"></div>
+      </div>
+      <div class="hint">Clique = revelar &nbsp;•&nbsp; o número = perigos nas casas vizinhas &nbsp;•&nbsp; arraste a 🚩 (canto direito ➡) até a cilada</div>
+      <div class="best" id="bestTime"></div>
+      <div class="menu-actions" style="margin-top:14px;">
+        <button class="btn ghost sm" id="backBtn">↩ MENU</button>
+        <button class="btn ghost sm" id="soundToggle2">🔊 SOM: ON</button>
+        <button class="btn ghost sm" id="musicToggle2">🎵 MÚSICA: ON</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================== OVERLAY FIM ===================== -->
+  <div id="overlay">
+    <div class="panel">
+      <span class="big-emoji" id="endEmoji">👓</span>
+      <h2 id="endTitle" class="win">VITÓRIA!</h2>
+      <div class="scene" id="endScene" style="display:none;"></div>
+      <p class="quip" id="endQuip"></p>
+      <p class="stat" id="endResult"></p>
+      <div class="mini-detail" id="endDetail"></div>
+      <div class="mini-rank" id="endTop3"></div>
+      <div class="panel-actions">
+        <button class="btn" id="againBtn">↻ JOGAR DE NOVO</button>
+        <button class="btn ghost" id="menuBtn">MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RANKING ===================== -->
+  <div id="rankOverlay">
+    <div class="panel">
+      <h2 class="win" style="font-size:26px;">🏆 RANKING</h2>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
+      <div id="rankList" class="ranklist"></div>
+      <div class="panel-actions" style="margin-top:14px;">
+        <button class="btn" id="rankClose">VOLTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== POP-UP DE NOME (obrigatório) ===================== -->
+  <div id="namePopup">
+    <div class="panel">
+      <span class="big-emoji">👵🌷</span>
+      <h2 class="win" style="font-size:24px;">QUEM VAI PASSEAR?</h2>
+      <p class="quip">Antes de soltar a Dona Anna no jardim, diga seu nome pro ranking:</p>
+      <input id="nameInput" maxlength="14" placeholder="Seu nome aqui, vovó">
+      <div class="panel-actions" style="margin-top:16px;">
+        <button class="btn" id="nameOk">▶ BORA PASSEAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== BANDEIRINHA ARRASTÁVEL (marcar cilada no celular) ===================== -->
+  <div id="flagPalette" title="Arraste a bandeirinha até a cilada">
+    <div id="flagSrc">🚩</div>
+    <div class="flag-hint">arraste até<br>a cilada</div>
+  </div>
+  <div id="dragFlag">🚩</div>
+
+  <!-- ===================== AVATAR DONA ANNA ===================== -->
+  <div id="annaLayer">
+    <div id="annaShadow"></div>
+    <div id="anna"><span class="body">👵</span></div>
+    <div id="annaBubble"></div>
+  </div>
+
+  <div class="credits">© FAZENDA GRUNGE GAMES • INSERT COIN • 1 PLAYER</div>
+
+<script>
+/* ============================================================
+   DONA ANNA — A CAÇA AOS ÓCULOS
+   Campo minado vanilla JS. Minas = perigos.
+   ============================================================ */
+
+// ---------- CONFIG ----------
+const DIFFICULTIES = [
+  { id:'soneca', emoji:'🌷', name:'PASSEIO NO JARDIM',  meta:'9×9 · 10 perigos · base 1500',   rows:9,  cols:9,  mines:10, start:1500 },
+  { id:'feira',  emoji:'🌳', name:'VOLTA NO PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500 },
+  { id:'netos',  emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 99 perigos · base 3500', rows:16, cols:30, mines:99, start:3500 },
+];
+
+// Perigos (minas). Cada um tem emoji + som próprio (sfx) + fala irônica de game over.
+const HAZARDS = [
+  { emoji:'🐍', sfx:'snake',   quip:'A cobra também procurava os óculos. Achou você primeiro.' },
+  { emoji:'🪜', sfx:'stairs',  quip:'Ixi! Foi só olhar pro lado que escorregou no degrau molhado: Escada 1 × 0 Dona Anna.' },
+  { emoji:'🧑‍⚕️', sfx:'physio', quip:'O fisioterapeuta te encurralou: "Bora fazer os exercícios, Dona Anna!" O pesadelo dela, enfim, realizado.' },
+  { emoji:'👵', sfx:'witch',   quip:'A vizinha te pegou pra conversar. Foram só 3 horas... até aqui.' },
+  { emoji:'🐔', sfx:'chicken', quip:'A galinha estava de mau humor. E tinha bico afiado.' },
+  { emoji:'🧼', sfx:'slip',    quip:'Sabão no chão + chinelo + 96 anos = física implacável.' },
+  { emoji:'💩', sfx:'plop',    quip:'A vaca deixou um recado no gramado. Você o encontrou.' },
+  { emoji:'🐕', sfx:'dog',     quip:'O cachorro achou que seus óculos eram petisco. E você, também.' },
+];
+
+// Falas do avatar da Dona Anna durante o passeio
+const RELIEF = ['Ufa!', 'Essa passou perto...', 'Ainda inteira!', 'Fé em Deus.', 'Coração, calma.'];
+const DISARM = ['Acham que vão me enganar?', 'Essa cilada eu já conheço.', 'Tô de olho, viu?', 'Cai fora, perigo!', 'Nasci de noite, mas não ontem.'];
+const TICKS  = ['Tá cheio de carrapato aqui!', 'Vou criar teia esperando você...', 'Anda logo, ô!', 'Minhas pernas não são de ferro!', 'Cadê meus óculos, cadê?'];
+
+// Cenas de consequência quando ela cai numa armadilha
+const LOSE_SCENES = [
+  { art:'🏥 🛏️👵🤕 💉', cap:'Fim de passeio: uma semaninha no hospital. E ainda sem enxergar direito.' },
+  { art:'☕ 👵😤 💬 🗣️👵', cap:'Pior que o tombo: 3 horas presa no papo da vizinha.' },
+  { art:'🧑‍⚕️ 💪 👵😫', cap:'Foi parar exatamente onde mais temia — a fisioterapia.' },
+];
+
+const WIN_QUIPS = [
+  'Achou os óculos! Estavam na cabeça o tempo todo. Óbvio.',
+  'Vitória! Os óculos estavam na geladeira. Ninguém questiona a Dona Anna.',
+  'Encontrou! Agora só falta lembrar por que foi até a cozinha.',
+];
+
+// ---------- ESTADO ----------
+let cfg = DIFFICULTIES[0];
+let grid = [];            // {mine, hazard, revealed, flagged, adj, el}
+let rows, cols, mineTotal;
+let started = false;      // primeira jogada já ocorreu?
+let over = false;
+let flagsUsed = 0;
+let revealedCount = 0;
+let timer = 0, timerInt = null;
+let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
+
+// ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
+const _ls = (()=>{ try{ return window.localStorage; }catch(e){ return null; } })();
+const LS = {
+  get(k){ try{ return _ls ? _ls.getItem(k) : null; }catch(e){ return null; } },
+  set(k,v){ try{ if(_ls) _ls.setItem(k,v); }catch(e){} },
+  remove(k){ try{ if(_ls) _ls.removeItem(k); }catch(e){} }
+};
+
+// ---------- ELEMENTOS ----------
+const $ = s => document.querySelector(s);
+const menuEl = $('#menu'), gameEl = $('#game'), overlayEl = $('#overlay');
+const boardEl = $('#board'), diffEl = $('#difficulties');
+const mineCountEl = $('#mineCount'), timerEl = $('#timer'), faceEl = $('#faceBtn');
+const bestEl = $('#bestTime');
+
+// ============================================================
+//  ÁUDIO — Web Audio API, tudo sintetizado (zero arquivos)
+// ============================================================
+let actx = null;
+function ac(){ if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+function beep(freq, dur=0.08, type='square', vol=0.15, slideTo=null){
+  if(!soundOn) return;
+  try{
+    const c = ac(), o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq;
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, c.currentTime+dur);
+    g.gain.value = vol;
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(); o.stop(c.currentTime+dur);
+  }catch(e){}
+}
+const S = {
+  reveal(){ beep(220+Math.random()*40, 0.05, 'square', 0.08); },
+  flag(){ beep(660, 0.07, 'triangle', 0.12); },
+  unflag(){ beep(330, 0.06, 'triangle', 0.1); },
+  boom(){
+    if(!soundOn) return;
+    beep(180, 0.5, 'sawtooth', 0.28, 40);
+    setTimeout(()=>beep(90, 0.4, 'sawtooth', 0.2, 30), 60);
+  },
+  win(){
+    if(!soundOn) return;
+    [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.18,'square',0.16),i*130));
+  },
+  click(){ beep(440,0.04,'square',0.1); }
+};
+
+// ---- ruído filtrado (para chocalho, splat, etc) ----
+function noise(dur=0.3, vol=0.18, type='bandpass', freq=1000, q=1){
+  if(!soundOn) return;
+  try{
+    const c=ac(), len=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,len,c.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    const src=c.createBufferSource(); src.buffer=buf;
+    const f=c.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q;
+    const g=c.createGain(); g.gain.value=vol; g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);
+    src.connect(f); f.connect(g); g.connect(c.destination);
+    src.start(); src.stop(c.currentTime+dur);
+  }catch(e){}
+}
+
+// ---- SOM ESPECÍFICO DE CADA PERIGO ----
+const HSFX = {
+  // cascavel: ruído agudo com tremolo rápido chacoalhando o rabo
+  snake(){
+    if(!soundOn) return;
+    try{
+      const c=ac(), dur=0.85, len=Math.floor(c.sampleRate*dur), buf=c.createBuffer(1,len,c.sampleRate), d=buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+      const src=c.createBufferSource(); src.buffer=buf;
+      const bp=c.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=5500; bp.Q.value=1.6;
+      const g=c.createGain(); g.gain.setValueAtTime(0.28,c.currentTime);
+      const lfo=c.createOscillator(); lfo.type='square'; lfo.frequency.value=33;
+      const lfoG=c.createGain(); lfoG.gain.value=0.26; lfo.connect(lfoG); lfoG.connect(g.gain);
+      g.gain.setValueAtTime(0.28,c.currentTime+dur-0.12);
+      g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+      src.connect(bp); bp.connect(g); g.connect(c.destination);
+      lfo.start(); src.start(); src.stop(c.currentTime+dur); lfo.stop(c.currentTime+dur);
+    }catch(e){}
+  },
+  // escada: "tan-tan-TAN" dramático, acordes graves descendentes
+  stairs(){
+    if(!soundOn) return;
+    [[220,262],[196,233],[147,175]].forEach((pair,i)=>setTimeout(()=>{
+      pair.forEach(f=>beep(f,0.38,'sawtooth',0.17));
+    }, i*190));
+  },
+  // fisioterapeuta: "huhuhu" grave de homem chato
+  physio(){
+    if(!soundOn) return;
+    [0,180,360].forEach((t,i)=>setTimeout(()=>beep(152-i*8,0.15,'sawtooth',0.16,108),t));
+  },
+  // vizinha/bruxa: gargalhada aguda e trêmula
+  witch(){
+    if(!soundOn) return;
+    [880,990,835,945,780,690].forEach((f,i)=>setTimeout(()=>beep(f+(i%2?34:-30),0.09,'triangle',0.13,f*0.82),i*95));
+  },
+  // galinha: cacarejo
+  chicken(){
+    if(!soundOn) return;
+    beep(720,0.12,'sawtooth',0.15,1150);
+    setTimeout(()=>beep(1000,0.16,'sawtooth',0.15,520),120);
+  },
+  // sabão: assobio subindo + tombo
+  slip(){
+    if(!soundOn) return;
+    beep(420,0.34,'sine',0.16,1450);
+    setTimeout(()=>beep(120,0.2,'sawtooth',0.24,48),360);
+  },
+  // vaca: "blop" grave + splat
+  plop(){
+    if(!soundOn) return;
+    beep(210,0.14,'sine',0.22,60);
+    setTimeout(()=>noise(0.2,0.16,'lowpass',600,1),80);
+  },
+  // cachorro: dois latidos
+  dog(){
+    if(!soundOn) return;
+    const bark=()=>{ beep(250,0.05,'square',0.19,185); setTimeout(()=>beep(410,0.08,'square',0.15,150),42); };
+    bark(); setTimeout(bark,190);
+  }
+};
+function playHazardSound(hz){
+  const fn = hz && hz.sfx && HSFX[hz.sfx];
+  if(fn) fn(); else S.boom();
+}
+
+// ============================================================
+//  AVATAR DONA ANNA — caminha pelo jardim, fala e reclama
+// ============================================================
+const annaEl = $('#anna'), annaShadow = $('#annaShadow'), annaBubble = $('#annaBubble');
+let annaX = null, annaY = null, annaBaseX = null, annaBaseY = null, annaCell = null;
+let walkTO = null, bubbleTO = null, idleTO = null;
+
+function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+
+function annaPlace(x, y, dur){
+  annaEl.style.transitionDuration = annaShadow.style.transitionDuration = annaBubble.style.transitionDuration = dur+'s';
+  annaEl.style.transform    = `translate(${x-23}px, ${y-42}px)`;
+  annaShadow.style.transform = `translate(${x-23}px, ${y-4}px)`;
+  annaBubble.style.transform = `translate(${x-6}px, ${y-80}px)`;
+}
+function moveAnnaToCell(el){
+  if(!el) return;
+  const r = el.getBoundingClientRect();
+  const x = r.left + r.width/2, y = r.top + r.height/2;
+  const dist = (annaX==null) ? 500 : Math.hypot(x-annaX, y-annaY);
+  const dur = Math.min(0.85, Math.max(0.28, dist/620));
+  annaX = x; annaY = y; annaBaseX = x; annaBaseY = y; annaCell = el;
+  annaPlace(x, y, dur);
+  annaEl.classList.add('walking');
+  clearTimeout(walkTO);
+  walkTO = setTimeout(()=>annaEl.classList.remove('walking'), dur*1000+60);
+}
+// parada: perambula devagar em volta da casa (dinamismo)
+function annaWander(){
+  if(!started || over || annaBaseX==null) return;
+  if(annaEl.classList.contains('walking')) return;
+  const dx = (Math.random()*2-1)*13, dy = (Math.random()*2-1)*7 - 2;
+  annaX = annaBaseX + dx; annaY = annaBaseY + dy;
+  annaPlace(annaX, annaY, 0.6);
+}
+setInterval(annaWander, 1500);
+function sayAnna(text, dur=1700){
+  if(!text) return;
+  annaBubble.textContent = text;
+  annaBubble.classList.add('show');
+  clearTimeout(bubbleTO);
+  bubbleTO = setTimeout(()=>annaBubble.classList.remove('show'), dur);
+}
+function setAnnaFace(f){ annaEl.querySelector('.body').textContent = f; }
+function hideAnna(){
+  clearTimeout(idleTO); clearTimeout(walkTO); clearTimeout(bubbleTO);
+  annaBubble.classList.remove('show');
+  annaEl.classList.remove('walking');
+  annaX = annaY = annaBaseX = annaBaseY = null; annaCell = null;
+  annaEl.style.transitionDuration = annaShadow.style.transitionDuration = annaBubble.style.transitionDuration = '0s';
+  annaEl.style.transform = annaShadow.style.transform = 'translate(-120px,-120px)';
+  annaBubble.style.transform = 'translate(-120px,-160px)';
+  setAnnaFace('👵');
+}
+// reclamação por ociosidade (>7s sem jogar)
+function resetIdle(){
+  clearTimeout(idleTO);
+  if(over || !started) return;
+  idleTO = setTimeout(idleComplain, 7000);
+}
+function idleComplain(){
+  if(over || !started) return;
+  sayAnna(pick(TICKS), 2600);
+  idleTO = setTimeout(idleComplain, 8500);
+}
+// reposiciona a vovó se a janela mudar de tamanho
+window.addEventListener('resize', ()=>{
+  if(annaCell && started && !over){
+    const r = annaCell.getBoundingClientRect();
+    annaX = annaBaseX = r.left + r.width/2; annaY = annaBaseY = r.top + r.height/2;
+    annaPlace(annaX, annaY, 0);
+  }
+});
+
+// ---- o cursor do mouse vira uma PÁ DE JARDINAGEM (formato de seta, ponta = alvo) ----
+function installTrowelCursor(){
+  try{
+    const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'>"+
+      "<g stroke='#241608' stroke-width='1.5' stroke-linejoin='round'>"+
+        "<rect x='15' y='14' width='17' height='6.5' rx='3' transform='rotate(45 15 14)' fill='#9a6431'/>"+ // cabo
+        "<path d='M2 2 L20 9 L9 20 Z' fill='#d3d8de'/>"+                                                   // lâmina (ponta em 2,2)
+        "<path d='M2 2 L12 6 L6 12 Z' fill='#eef1f5'/>"+                                                   // brilho da ponta
+      "</g></svg>";
+    const url = 'data:image/svg+xml,' + encodeURIComponent(svg);
+    const st = document.createElement('style');
+    st.textContent = `*{cursor:url("${url}") 2 2, auto !important;}`;
+    document.head.appendChild(st);
+  }catch(e){}
+}
+
+// ============================================================
+//  MÚSICA TEMÁTICA — passeio no jardim (estilo Animal Crossing)
+//  Loop suave sintetizado, com volume próprio (independente dos SFX)
+// ============================================================
+const Music = (()=>{
+  let mGain=null, playing=false, step=0, loop=null, vol=0.45;
+  const BPM=100, beat=60/BPM;
+  // progressão I–vi–ii–V em Dó maior (aconchegante, jazzy)
+  const prog = [
+    { root:48, chord:[60,64,67,71] }, // Cmaj7
+    { root:45, chord:[57,60,64,67] }, // Am7
+    { root:50, chord:[57,62,65,69] }, // Dm7
+    { root:43, chord:[59,62,65,67] }, // G7
+  ];
+  const penta = [62,64,67,69,72,74]; // melodia doce (pentatônica)
+  function bus(){ if(!mGain){ mGain=ac().createGain(); mGain.gain.value=vol; mGain.connect(ac().destination);} return mGain; }
+  function voice(midi,dur,type,v,att=0.012){
+    try{
+      const c=ac(), o=c.createOscillator(), g=c.createGain();
+      o.type=type; o.frequency.value=440*Math.pow(2,(midi-69)/12);
+      g.gain.setValueAtTime(0.0001,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002,v),c.currentTime+att);
+      g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);
+      o.connect(g); g.connect(bus());
+      o.start(); o.stop(c.currentTime+dur+0.03);
+    }catch(e){}
+  }
+  function tick(){
+    const p = prog[Math.floor(step/4)%prog.length];
+    const b = step%4;
+    if(b===0) voice(p.root, beat*1.7, 'sine', 0.16, 0.02);      // baixo
+    if(b===2) voice(p.root+7, beat*1.2, 'sine', 0.11, 0.02);
+    voice(p.chord[b%p.chord.length], beat*0.95, 'triangle', 0.06); // acorde (marimba)
+    if(Math.random()<0.6){                                       // melodia caixinha-de-música
+      const m = penta[Math.floor(Math.random()*penta.length)] + (Math.random()<0.28?12:0);
+      voice(m, beat*0.8, 'sine', 0.085);
+    }
+    step++;
+  }
+  return {
+    start(){ if(playing) return; playing=true; step=0; bus(); tick(); loop=setInterval(tick, beat*1000); },
+    stop(){ playing=false; if(loop){clearInterval(loop);loop=null;} },
+    setVolume(v){ vol=v; if(mGain) mGain.gain.value=v; },
+  };
+})();
+
+// ============================================================
+//  NOME DO JOGADOR + RANKING (pontuação por rapidez)
+// ============================================================
+let lastScore = 0, lastRankPos = 0;
+const RANK_KEY = 'donaAnna_rank_v2';
+const TIME_PENALTY = 1; // pontos descontados por segundo
+
+function countFlaggedMines(){
+  let n=0;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(g.mine && g.flagged) n++; }
+  return n;
+}
+// Pontuação: base da fase − tempo + 50×minas descobertas − 100×minas não descobertas
+function computeScore(win){
+  const discovered = win ? mineTotal : countFlaggedMines();
+  const notDisc = mineTotal - discovered;
+  const score = cfg.start - timer*TIME_PENALTY + 50*discovered - 100*notDisc;
+  return { score, discovered, notDisc };
+}
+function loadRank(){ try{ return JSON.parse(LS.get(RANK_KEY)||'[]'); }catch(e){ return []; } }
+function recordScore(entry){                    // SEMPRE salvo no histórico
+  const list = loadRank();
+  list.push(entry);
+  list.sort((a,b)=> b.score - a.score);
+  const pos = list.indexOf(entry) + 1;          // posição no histórico completo
+  LS.set(RANK_KEY, JSON.stringify(list.slice(0,100)));
+  return pos;
+}
+function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString('pt-BR'); }catch(e){ return '—'; } }
+function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderRank(){
+  const list = loadRank(), el = $('#rankList');
+  if(!list.length){ el.innerHTML='<div class="rank-empty">Ninguém no ranking ainda. Seja a primeira, vovó! 🌷</div>'; return; }
+  el.innerHTML = list.map((e,i)=>
+    `<div class="rank-row"><span class="pos">${i+1}º</span><span class="nm">${escapeHtml(e.name)}</span>`+
+    `<span class="dt">${fmtDate(e.when)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span></div>`
+  ).join('');
+}
+
+// ============================================================
+//  MENU
+// ============================================================
+function buildMenu(){
+  diffEl.innerHTML = '';
+  DIFFICULTIES.forEach((d,i)=>{
+    const card = document.createElement('div');
+    card.className = 'diff' + (d.id===cfg.id?' active':'');
+    card.innerHTML = `<span class="emoji">${d.emoji}</span>
+      <span class="name">${d.name}</span>
+      <span class="meta">${d.meta}</span>`;
+    card.onclick = ()=>{
+      cfg = d; S.click();
+      document.querySelectorAll('.diff').forEach(c=>c.classList.remove('active'));
+      card.classList.add('active');
+    };
+    diffEl.appendChild(card);
+  });
+}
+
+// ============================================================
+//  INICIAR PARTIDA
+// ============================================================
+function startGame(){
+  rows = cfg.rows; cols = cfg.cols; mineTotal = cfg.mines;
+  grid = []; started = false; over = false;
+  flagsUsed = 0; revealedCount = 0; timer = 0;
+  stopTimer();
+  faceEl.textContent = '👵';
+  timerEl.textContent = '000';
+  updateMineCount();
+  showBest();
+
+  boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  boardEl.innerHTML = '';
+  for(let r=0;r<rows;r++){
+    grid[r]=[];
+    for(let c=0;c<cols;c++){
+      const el = document.createElement('div');
+      el.className='cell';
+      el.dataset.r=r; el.dataset.c=c;
+      el.addEventListener('click', ()=>onReveal(r,c));
+      el.addEventListener('contextmenu', e=>{e.preventDefault(); onFlag(r,c);});
+      boardEl.appendChild(el);
+      grid[r][c] = {mine:false, hazard:null, revealed:false, flagged:false, adj:0, el};
+    }
+  }
+  // florzinhas decorativas em ~14% das moitas (só enfeite, não é perigo)
+  const FLOWERS = ['🌷','🌼','🌸','🌻','🪻'];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(Math.random()<0.14){
+      const s = document.createElement('span');
+      s.className='deco'; s.textContent = FLOWERS[Math.floor(Math.random()*FLOWERS.length)];
+      grid[r][c].el.appendChild(s);
+    }
+  }
+  hideAnna();
+  menuEl.style.display='none';
+  gameEl.style.display='flex';
+  overlayEl.style.display='none';
+  flagPalette.style.display='flex'; // bandeirinha arrastável disponível
+}
+
+// posiciona minas DEPOIS do 1º clique (nunca morre de cara)
+function placeMines(safeR, safeC){
+  const forbidden = new Set();
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    forbidden.add((safeR+dr)+','+(safeC+dc));
+  }
+  let placed=0;
+  while(placed<mineTotal){
+    const r = Math.floor(Math.random()*rows);
+    const c = Math.floor(Math.random()*cols);
+    if(grid[r][c].mine) continue;
+    if(forbidden.has(r+','+c)) continue;
+    grid[r][c].mine = true;
+    grid[r][c].hazard = HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
+    placed++;
+  }
+  // calcular números vizinhos
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    if(grid[r][c].mine) continue;
+    let n=0;
+    forEachNeighbor(r,c,(nr,nc)=>{ if(grid[nr][nc].mine) n++; });
+    grid[r][c].adj = n;
+  }
+}
+
+function forEachNeighbor(r,c,fn){
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+    if(dr===0&&dc===0) continue;
+    const nr=r+dr, nc=c+dc;
+    if(nr>=0&&nr<rows&&nc>=0&&nc<cols) fn(nr,nc);
+  }
+}
+
+// ============================================================
+//  REVELAR
+// ============================================================
+function onReveal(r,c){
+  if(over) return;
+  const cell = grid[r][c];
+  if(cell.flagged || cell.revealed) return;
+
+  if(!started){
+    started = true;
+    placeMines(r,c);
+    startTimer();
+  }
+
+  moveAnnaToCell(cell.el); // a vovó caminha até a casa clicada
+
+  if(cell.mine){
+    revealCell(cell, r, c);
+    cell.el.classList.add('boom');
+    return loseGame(cell);
+  }
+
+  floodReveal(r,c);
+  S.reveal();
+  resetIdle();
+  if(Math.random()<0.28) sayAnna(pick(RELIEF));
+  checkWin();
+}
+
+function revealCell(cell,r,c){
+  if(cell.revealed) return;
+  const dd = cell.el.querySelector('.deco'); if(dd) dd.remove();
+  cell.revealed = true;
+  revealedCount++;
+  cell.el.classList.add('open');
+  if(cell.mine){
+    cell.el.textContent = cell.hazard.emoji;
+  }else if(cell.adj>0){
+    cell.el.innerHTML = `<span class="n${cell.adj}">${cell.adj}</span>`;
+  }
+}
+
+function floodReveal(r,c){
+  const stack = [[r,c]];
+  while(stack.length){
+    const [cr,cc] = stack.pop();
+    const cell = grid[cr][cc];
+    if(cell.revealed || cell.flagged || cell.mine) continue;
+    revealCell(cell,cr,cc);
+    if(cell.adj===0){
+      forEachNeighbor(cr,cc,(nr,nc)=>{
+        if(!grid[nr][nc].revealed) stack.push([nr,nc]);
+      });
+    }
+  }
+}
+
+// ============================================================
+//  MARCAR (BANDEIRA)
+// ============================================================
+function onFlag(r,c){
+  if(over || !started) return;
+  const cell = grid[r][c];
+  if(cell.revealed) return;
+  cell.flagged = !cell.flagged;
+  if(cell.flagged){
+    cell.el.classList.add('flag');
+    cell.el.textContent = '🚩';
+    flagsUsed++;
+    S.flag();
+    moveAnnaToCell(cell.el);
+    sayAnna(pick(DISARM));
+  }else{
+    cell.el.classList.remove('flag');
+    cell.el.textContent = '';
+    flagsUsed--;
+    S.unflag();
+  }
+  updateMineCount();
+  resetIdle();
+}
+
+// ============================================================
+//  FIM DE JOGO
+// ============================================================
+function loseGame(hitCell){
+  over = true;
+  stopTimer();
+  clearTimeout(idleTO);
+  faceEl.textContent = '😵';
+  setAnnaFace('😵'); annaBubble.classList.remove('show');
+  playHazardSound(hitCell.hazard); // SOM ESPECÍFICO do perigo pisado
+  document.body.classList.add('screen-shake');
+  setTimeout(()=>document.body.classList.remove('screen-shake'), 450);
+
+  // revela todos os perigos + marca bandeiras erradas
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const cell = grid[r][c];
+    if(cell.mine && !cell.revealed && !cell.flagged){
+      cell.el.classList.add('open');
+      cell.el.textContent = cell.hazard.emoji;
+      cell.el.style.opacity='.85';
+    }
+    if(cell.flagged && !cell.mine){
+      cell.el.classList.add('wrongflag');
+      cell.el.textContent = '❌';
+    }
+  }
+  setTimeout(()=>endScreen(false, hitCell.hazard), 700);
+}
+
+function checkWin(){
+  const safe = rows*cols - mineTotal;
+  if(revealedCount >= safe){
+    over = true;
+    stopTimer();
+    clearTimeout(idleTO);
+    faceEl.textContent = '😎';
+    setAnnaFace('😎');
+    S.win();
+    // marca todos os perigos com óculos "encontrados"
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+      const cell = grid[r][c];
+      if(cell.mine){ cell.el.classList.add('flag'); cell.el.textContent='👓'; }
+    }
+    saveBest(timer);
+    setTimeout(()=>endScreen(true, null), 700);
+  }
+}
+
+function endScreen(win, hazard){
+  flagPalette.style.display = 'none';
+  $('#endEmoji').textContent = win ? '👓' : hazard.emoji;
+  const t = $('#endTitle');
+  t.textContent = win ? 'ACHOU!' : 'GAME OVER';
+  t.className = win ? 'win' : 'lose';
+
+  const scene = $('#endScene');
+  if(win){
+    scene.style.display='none'; scene.innerHTML='';
+  }else{
+    const s = pick(LOSE_SCENES);
+    scene.style.display='block';
+    scene.innerHTML = `<div class="art">${s.art}</div><div class="cap">${s.cap}</div>`;
+  }
+  $('#endQuip').textContent = win ? pick(WIN_QUIPS) : hazard.quip;
+
+  // ---- pontuação SEMPRE registrada no histórico ----
+  const cs = computeScore(win);
+  const entry = { name: playerName || 'Anônima', score: cs.score, time: timer, diff: cfg.name, id: cfg.id, won: win, when: Date.now() };
+  const pos = recordScore(entry);
+  lastScore = cs.score; lastRankPos = pos;
+
+  $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <b style="color:var(--amber)">${pos}º lugar</b>`;
+  $('#endDetail').textContent =
+    `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
+
+  const top = loadRank().slice(0,3);
+  $('#endTop3').innerHTML = '<div class="mr-title">🏆 TOP 3</div>' + top.map((e,i)=>
+    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
+    `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when)}</span><span class="mr-sc">${e.score}</span></div>`
+  ).join('');
+
+  overlayEl.style.display='flex';
+}
+
+// ============================================================
+//  HUD / TIMER / BEST
+// ============================================================
+function updateMineCount(){
+  const left = Math.max(0, mineTotal - flagsUsed);
+  mineCountEl.textContent = '🐍 ' + String(left).padStart(3,'0');
+}
+function startTimer(){
+  stopTimer();
+  timerInt = setInterval(()=>{
+    timer++;
+    timerEl.textContent = String(Math.min(timer,999)).padStart(3,'0');
+  }, 1000);
+}
+function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
+
+function bestKey(){ return 'donaAnna_best_'+cfg.id; }
+function saveBest(t){
+  const cur = parseInt(LS.get(bestKey())||'0',10);
+  if(!cur || t<cur){ LS.set(bestKey(), t); }
+}
+function showBest(){
+  const cur = parseInt(LS.get(bestKey())||'0',10);
+  bestEl.textContent = cur ? `⏱️ Melhor tempo (${cfg.name}): ${cur}s` : '';
+}
+
+// ============================================================
+//  SOM / MÚSICA — ligar/desligar + volume (+/−)
+// ============================================================
+function updateSoundLabels(){ const l = soundOn?'🔊 SOM: ON':'🔇 SOM: OFF'; ['#soundToggle','#soundToggle2'].forEach(s=>{const e=$(s); if(e) e.textContent=l;}); }
+function toggleSound(){ soundOn=!soundOn; updateSoundLabels(); LS.set('donaAnna_sound', soundOn?1:0); if(soundOn) S.click(); }
+function updateMusicLabels(){ const l = musicOn?'🎵 MÚSICA: ON':'🎵 MÚSICA: OFF'; ['#musicToggle','#musicToggle2'].forEach(s=>{const e=$(s); if(e) e.textContent=l;}); }
+function toggleMusic(){ musicOn=!musicOn; updateMusicLabels(); LS.set('donaAnna_music', musicOn?1:0); if(musicOn) Music.start(); else Music.stop(); }
+function applyMusicVol(v){ musicVol=Math.max(0,Math.min(100,Math.round(v))); $('#musicVolVal').textContent=musicVol; Music.setVolume(musicVol/100); LS.set('donaAnna_musicvol', musicVol); }
+
+// ============================================================
+//  NOME OBRIGATÓRIO — pop-up inicial antes do menu
+// ============================================================
+const namePopup=$('#namePopup'), nameInput=$('#nameInput'), nameOk=$('#nameOk');
+function validateName(){ nameOk.disabled = !nameInput.value.trim(); }
+function openNamePopup(){ nameInput.value = playerName || (LS.get('donaAnna_name')||''); validateName(); namePopup.style.display='flex'; setTimeout(()=>{ try{nameInput.focus();}catch(e){} },60); }
+function confirmName(){
+  const v = nameInput.value.trim(); if(!v) return;
+  playerName = v.slice(0,14);
+  LS.set('donaAnna_name', playerName);
+  namePopup.style.display='none';
+  if(musicOn) Music.start(); // 1º gesto garantido para o áudio
+}
+nameInput.addEventListener('input', validateName);
+nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmName(); });
+nameOk.onclick = ()=>{ S.click(); confirmName(); };
+
+// ============================================================
+//  ARRASTAR A BANDEIRINHA até a cilada (funciona no celular via pointer events)
+// ============================================================
+const flagPalette=$('#flagPalette'), flagSrc=$('#flagSrc'), dragFlag=$('#dragFlag');
+let dragging=false;
+function dStart(e){ if(over||!started) return; dragging=true; dragFlag.style.display='block'; dMove(e); try{ flagSrc.setPointerCapture(e.pointerId); }catch(_){}; e.preventDefault(); }
+function dMove(e){ if(!dragging) return; dragFlag.style.transform=`translate(${e.clientX-18}px,${e.clientY-34}px)`; e.preventDefault(); }
+function dEnd(e){
+  if(!dragging) return; dragging=false; dragFlag.style.display='none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = (el && el.closest) ? el.closest('.cell') : null;
+  if(cell && cell.dataset.r!=null){ const r=+cell.dataset.r, c=+cell.dataset.c; if(grid[r] && grid[r][c] && !grid[r][c].revealed) onFlag(r,c); }
+}
+flagSrc.addEventListener('pointerdown', dStart);
+window.addEventListener('pointermove', dMove);
+window.addEventListener('pointerup', dEnd);
+
+// ============================================================
+//  LIGAÇÕES DE UI
+// ============================================================
+function goMenu(){ stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; buildMenu(); }
+$('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } S.click(); startGame(); };
+$('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
+$('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
+$('#soundToggle').onclick = $('#soundToggle2').onclick = ()=>toggleSound();
+$('#musicToggle').onclick = $('#musicToggle2').onclick = ()=>toggleMusic();
+$('#volDown').onclick = ()=>{ S.click(); applyMusicVol(musicVol-10); };
+$('#volUp').onclick   = ()=>{ S.click(); applyMusicVol(musicVol+10); };
+$('#nameChange').onclick = ()=>{ S.click(); openNamePopup(); };
+$('#againBtn').onclick = ()=>{ S.click(); startGame(); };
+$('#menuBtn').onclick  = ()=>{ S.click(); goMenu(); };
+$('#rankBtn').onclick   = ()=>{ S.click(); renderRank(); $('#rankOverlay').style.display='flex'; };
+$('#rankClose').onclick = ()=>{ S.click(); $('#rankOverlay').style.display='none'; };
+
+boardEl.addEventListener('contextmenu', e=>e.preventDefault());
+
+// ---------- BOOT ----------
+(function boot(){
+  soundOn = LS.get('donaAnna_sound') !== '0';
+  musicOn = LS.get('donaAnna_music') !== '0';
+  const sv = parseInt(LS.get('donaAnna_musicvol'), 10);
+  musicVol = isNaN(sv) ? 45 : sv;
+  playerName = ''; // força o pop-up de nome sempre no início
+  updateSoundLabels(); updateMusicLabels();
+  $('#musicVolVal').textContent = musicVol; Music.setVolume(musicVol/100);
+  buildMenu();
+  installTrowelCursor();
+  openNamePopup(); // nome é obrigatório antes de jogar
+})();
+</script>
+</body>
+</html>
