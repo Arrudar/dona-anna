@@ -12,7 +12,7 @@ Um **campo minado** de fliperama com estética **grunge 2.5D** (vibe Street Figh
 ## Pontuação e ranking
 - Cada fase começa com uma base (**1500 / 2500 / 3500**) e perde 1 ponto por segundo
 - **+50** por cada cilada descoberta · **−100** por cada cilada não descoberta (game over)
-- Toda partida (vitória ou derrota) é salva no ranking, com **nome, data, fase e pontos**
+- Toda partida (vitória ou derrota) é salva num **ranking compartilhado online** (Supabase) — todos que jogam pelo link veem as pontuações de todos, com **nome, data, fase e pontos** (fallback local se estiver offline)
 - No fim aparecem os **TOP 3** e o resultado/posição da sua partida
 - Controles de **🔊 Som On/Off**, **🎵 Música On/Off** e volume **+/−** no menu
 

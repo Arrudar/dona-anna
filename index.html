@@ -292,6 +292,7 @@
   .mini-rank .mr-row:first-of-type .mr-nm{color:var(--amber);}
   .mini-rank .mr-nm{font-weight:bold;} .mini-rank .mr-dv{font-size:10px;color:#a3906c;}
   .mini-rank .mr-sc{text-align:right;color:#8fd06a;font-weight:bold;}
+  .mini-rank .mr-loading{font-family:Georgia,serif;font-style:italic;font-size:12px;color:#8a7550;padding:4px 0;}
 
   /* ---- portão de senha ---- */
   #gate{display:none;position:fixed;inset:0;z-index:10010;
@@ -458,7 +459,7 @@
   <!-- ===================== RANKING ===================== -->
   <div id="rankOverlay">
     <div class="panel">
-      <h2 class="win" style="font-size:26px;">🏆 RANKING</h2>
+      <h2 class="win" id="rankTitle" style="font-size:26px;">🏆 RANKING</h2>
       <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
       <div id="rankList" class="ranklist"></div>
       <div class="panel-actions" style="margin-top:14px;">
@@ -848,23 +849,60 @@ function computeScore(win){
   return { score, discovered, notDisc };
 }
 function loadRank(){ try{ return JSON.parse(LS.get(RANK_KEY)||'[]'); }catch(e){ return []; } }
-function recordScore(entry){                    // SEMPRE salvo no histórico
+function recordLocal(entry){                     // histórico local (fallback/offline)
   const list = loadRank();
   list.push(entry);
   list.sort((a,b)=> b.score - a.score);
-  const pos = list.indexOf(entry) + 1;          // posição no histórico completo
+  const pos = list.indexOf(entry) + 1;
   LS.set(RANK_KEY, JSON.stringify(list.slice(0,100)));
   return pos;
 }
 function fmtDate(ts){ try{ return new Date(ts).toLocaleDateString('pt-BR'); }catch(e){ return '—'; } }
 function escapeHtml(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function renderRank(){
-  const list = loadRank(), el = $('#rankList');
-  if(!list.length){ el.innerHTML='<div class="rank-empty">Ninguém no ranking ainda. Seja a primeira, vovó! 🌷</div>'; return; }
-  el.innerHTML = list.map((e,i)=>
+
+// ============================================================
+//  RANKING COMPARTILHADO — Supabase (REST). Chave publishable = segura no cliente.
+// ============================================================
+const SB_URL = 'https://dyclajfeskcawedlbdci.supabase.co/rest/v1';
+const SB_KEY = 'sb_publishable_lHlhARrcI02HyRzdr0ynMQ_NaAwMI46';
+const SB_H = { 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json' };
+async function sbInsert(e){
+  try{
+    const r = await fetch(SB_URL+'/scores', { method:'POST', headers:{...SB_H,'Prefer':'return=minimal'},
+      body: JSON.stringify({ name:e.name, score:e.score, time:e.time, diff:e.diff, won:!!e.won }) });
+    return r.ok;
+  }catch(err){ return false; }
+}
+async function sbTop(limit){
+  try{
+    const r = await fetch(SB_URL+`/scores?select=name,score,time,diff,created_at&order=score.desc,created_at.asc&limit=${limit}`, { headers:SB_H });
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(err){ return null; }
+}
+async function sbPosition(score){
+  try{
+    const r = await fetch(SB_URL+`/scores?select=id&score=gt.${score}`, { headers:{...SB_H,'Prefer':'count=exact','Range':'0-0'} });
+    const cr = r.headers.get('content-range');   // ex: "0-0/42" ou "*/0"
+    const total = cr ? parseInt(cr.split('/')[1],10) : NaN;
+    return isNaN(total) ? null : total+1;
+  }catch(err){ return null; }
+}
+// normaliza entradas (local usa .when em ms; remoto usa .created_at ISO)
+function rankRowsHTML(list){
+  return list.map((e,i)=>
     `<div class="rank-row"><span class="pos">${i+1}º</span><span class="nm">${escapeHtml(e.name)}</span>`+
-    `<span class="dt">${fmtDate(e.when)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span></div>`
+    `<span class="dt">${fmtDate(e.when||e.created_at)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span></div>`
   ).join('');
+}
+async function renderRank(){
+  const el = $('#rankList');
+  el.innerHTML = '<div class="rank-empty">Carregando ranking compartilhado… 🌐</div>';
+  let list = await sbTop(100), note = '';
+  if(list===null){ list = loadRank(); note = ' (local — sem conexão)'; }
+  $('#rankTitle').textContent = '🏆 RANKING' + note;
+  if(!list.length){ el.innerHTML='<div class="rank-empty">Ninguém no ranking ainda. Seja a primeira, vovó! 🌷</div>'; return; }
+  el.innerHTML = rankRowsHTML(list);
 }
 
 // ============================================================
@@ -1093,7 +1131,7 @@ function checkWin(){
   }
 }
 
-function endScreen(win, hazard){
+async function endScreen(win, hazard){
   flagPalette.style.display = 'none';
   $('#endEmoji').textContent = win ? '👓' : hazard.emoji;
   const t = $('#endTitle');
@@ -1110,23 +1148,32 @@ function endScreen(win, hazard){
   }
   $('#endQuip').textContent = win ? pick(WIN_QUIPS) : hazard.quip;
 
-  // ---- pontuação SEMPRE registrada no histórico ----
+  // ---- pontuação da partida ----
   const cs = computeScore(win);
   const entry = { name: playerName || 'Anônima', score: cs.score, time: timer, diff: cfg.name, id: cfg.id, won: win, when: Date.now() };
-  const pos = recordScore(entry);
-  lastScore = cs.score; lastRankPos = pos;
+  const localPos = recordLocal(entry);   // fallback offline
+  lastScore = cs.score;
 
-  $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <b style="color:var(--amber)">${pos}º lugar</b>`;
+  $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
     `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
-
-  const top = loadRank().slice(0,3);
-  $('#endTop3').innerHTML = '<div class="mr-title">🏆 TOP 3</div>' + top.map((e,i)=>
-    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
-    `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when)}</span><span class="mr-sc">${e.score}</span></div>`
-  ).join('');
-
+  $('#endTop3').innerHTML = '<div class="mr-title">🏆 TOP 3 (todos)</div><div class="mr-loading">carregando ranking compartilhado…</div>';
   overlayEl.style.display='flex';
+
+  // ---- ranking COMPARTILHADO (Supabase) com fallback local ----
+  await sbInsert(entry);
+  const top = await sbTop(3);
+  const pos = await sbPosition(cs.score);
+  const shared = (top !== null && pos !== null);
+  const list = shared ? top : loadRank().slice(0,3);
+  const posText = shared ? `${pos}º no mundo 🌍` : `${localPos}º (local, offline)`;
+  const title = shared ? '🏆 TOP 3 (todos)' : '🏆 TOP 3 (local, offline)';
+
+  const posEl = $('#endPos'); if(posEl) posEl.textContent = posText;
+  $('#endTop3').innerHTML = `<div class="mr-title">${title}</div>` + list.map((e,i)=>
+    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
+    `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when||e.created_at)}</span><span class="mr-sc">${e.score}</span></div>`
+  ).join('');
 }
 
 // ============================================================
