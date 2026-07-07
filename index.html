@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vovó Anna e os perigos do seu jardim</title>
+<title>Vovó Anna e as Armadilhas do Jardim</title>
 <style>
   /* ===================== BASE / TEMA GRUNGE FLIPERAMA ===================== */
   :root{
@@ -527,7 +527,7 @@
 
   <h1 class="arcade-title">
     <span class="l1">VOVÓ ANNA</span>
-    <span class="l2">E OS PERIGOS DO SEU JARDIM</span>
+    <span class="l2">E AS ARMADILHAS DO JARDIM</span>
   </h1>
 
   <div class="stage">
@@ -822,7 +822,7 @@ let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
 let clockOn = false; // (legado, não usado no modelo clássico)
-let fury = 0; let furyRaw = 0; let furyMax = 10; let furyBlast = false; // especial "Aura da Vovó" (máx por fase: 10,15,20,25). furyRaw = soma bruta dos números; a barra vale ceil(soma/2)
+let fury = 0; let furyRaw = 0; let furyMax = 10; let furyBlast = false; let furyFirstMove = false; // especial "Aura da Vovó" (máx por fase: 10,15,20,25). furyRaw = soma bruta dos números; a barra vale ceil(soma/2). furyFirstMove: no 1º clique a clareira conta só metade (1/4 do total, pra não estourar a barra)
 let tutorial = false, tutStep = 0; // modo tutorial (onboarding)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
@@ -1319,7 +1319,7 @@ function startGame(){
       grid[r][c].el.appendChild(s);
     }
   }
-  fury = 0; furyRaw = 0; furyBlast = false; furyMax = 10 + 5*DIFFICULTIES.indexOf(cfg); updateFuryUI(); // máx por fase: 10/15/20/25
+  fury = 0; furyRaw = 0; furyBlast = false; furyFirstMove = false; furyMax = 10 + 5*DIFFICULTIES.indexOf(cfg); updateFuryUI(); // máx por fase: 10/15/20/25
 
   hideAnna();
   fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
@@ -1415,7 +1415,7 @@ function onReveal(r,c){
   if(cell.revealed) return;
   if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
-  if(!started){ started = true; placeMines(r,c); startTimer(); } // 1º clique posiciona minas (sempre seguro)
+  if(!started){ started = true; placeMines(r,c); startTimer(); furyFirstMove = true; } // 1º clique posiciona minas (sempre seguro); marca a jogada pra descontar a Aura da clareira inicial
 
   moveAnnaToCell(cell.el); // a vovó caminha até a casa clicada
 
@@ -1426,6 +1426,7 @@ function onReveal(r,c){
   }
 
   floodReveal(r,c);
+  furyFirstMove = false; // a partir daqui cada número volta a valer 1/2 da Aura
   S.reveal();
   resetIdle();
   resetHelp();        // reinicia o timer da dica de área segura
@@ -1669,7 +1670,7 @@ function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 //  AURA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
 // ============================================================
 const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
-function addFury(n){ if(furyBlast || tutorial) return; furyRaw += n; fury = Math.min(furyMax, Math.ceil(furyRaw/2)); updateFuryUI(); } // cada número vale 1/2 ponto de Aura (soma arredondada pra cima)
+function addFury(n){ if(furyBlast || tutorial) return; furyRaw += furyFirstMove ? n/2 : n; fury = Math.min(furyMax, Math.ceil(furyRaw/2)); updateFuryUI(); } // cada número vale 1/2 ponto de Aura; no 1º clique vale metade disso (1/4 do total), pra a clareira inicial não encher a barra
 function updateFuryUI(){
   const ready = fury >= furyMax && !over;
   furyFill.style.width = Math.round(fury/furyMax*100) + '%';
