@@ -137,6 +137,9 @@
 
   /* ===================== JOGO ===================== */
   #game{display:none;width:100%;flex-direction:column;align-items:center;animation:fadeIn .4s ease;}
+  #phaseName{text-align:center;font-size:clamp(15px,2.7vw,23px);letter-spacing:2px;color:var(--amber);
+    margin:2px 0 12px;text-shadow:0 2px 0 #000,0 0 14px rgba(255,178,40,.45);transform:skewX(-4deg);
+    -webkit-text-stroke:1px #000;}
   .hud{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     width:100%;max-width:640px;margin:6px 0 22px;
@@ -481,6 +484,7 @@
 
     <!-- ===================== JOGO ===================== -->
     <div id="game">
+      <div id="phaseName"></div>
       <div class="hud">
         <div class="counter" id="mineCount" title="Perigos restantes">🐍 000</div>
         <div class="face" id="faceBtn" title="Reiniciar">👵</div>
@@ -1098,6 +1102,7 @@ function startGame(){
   flagsUsed = 0; revealedCount = 0; timer = 0;
   stopTimer();
   faceEl.textContent = '👵';
+  $('#phaseName').textContent = cfg.emoji + '  ' + cfg.name; // nome da fase no topo
   timerEl.textContent = '000';
   updateMineCount();
   showBest();
@@ -1442,12 +1447,13 @@ function useFury(){
   setTimeout(()=>document.body.classList.remove('screen-shake'), 600);
   furyBlast = true;
   setTimeout(()=>{
-    // cometas ELIMINAM um número aleatório de casas (entre 15 e o máx da fase), só em áreas sem armadilhas
+    // cometas ELIMINAM um número aleatório de casas (entre 10 e o máx da fase), só em casas
+    // AINDA NÃO CLICADAS e SEM armadilhas (!mine, !revealed, !flagged)
     const safe=[];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.revealed && !g.flagged) safe.push([r,c]); }
     for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
-    const low = Math.min(15, furyMax); // piso 15, mas nunca acima do máx da fase
-    const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório low..furyMax
+    const low = 10; // elimina entre 10 e o máximo da Fúria daquela fase
+    const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório 10..furyMax
     const hits = Math.min(n, safe.length);
     for(let i=0;i<hits;i++){ const p=safe[i]; revealCell(grid[p[0]][p[1]], p[0], p[1]); }
     furyBlast=false; fury=0; updateFuryUI();
