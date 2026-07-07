@@ -208,8 +208,6 @@
     0%,100%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,201,110,.5),0 0 22px 5px rgba(255,180,74,.38);}
     50%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,224,150,.85),0 0 40px 12px rgba(255,190,90,.7);}
   }
-  #tutBanner.acting{opacity:.5;animation:none;box-shadow:0 12px 30px rgba(0,0,0,.6),0 0 0 2px rgba(255,201,110,.4);} /* recua na hora de você agir (o tabuleiro aparece bem) */
-  #tutBanner.acting:hover{opacity:1;}
   .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));animation:annaIdle 1.9s ease-in-out infinite;}
   .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#f0e2c4;text-align:left;}
   .tut-text b{color:var(--amber);}
@@ -1613,19 +1611,19 @@ const TUT = [
   { require:'next', highlight:[[2,3]], text:'Repara nos <b>números</b> que apareceram. Cada número diz <b>quantas armadilhas 🪤 estão nas casinhas vizinhas</b> (as 8 ao redor). Um <b>2</b> = duas armadilhas coladas nele.' },
   { require:'next', text:'Agora, {NAME}, respira e pensa uns <b>10 segundinhos</b> 🕰️: olhando os números, <b>quais casinhas COM CERTEZA têm armadilha?</b> E <b>quais COM CERTEZA são seguras?</b> Quando pensar, clique em <b>Próximo</b>.' },
   { require:'next', onEnter:()=>{ tutHlCell(2,1,'tut-hl'); tutPeek([[3,2]]); }, text:'Vamos juntos! 🕵️ Olha aquele <b>1</b> piscando (verde): ele encosta em <b>uma única</b> casinha de mato. Se tem 1 armadilha e só 1 vizinha coberta... <b>é ali, sem dúvida!</b> 🪤 (viu o perigo por baixo?)' },
-  { require:'next', onEnter:()=>{ tutHlCell(3,1,'tut-hl'); tutHlCell(3,3,'tut-hl'); tutHlCell(4,2,'tut-hl'); }, text:'Agora as <b>SEGURAS</b> 🌿: aquele <b>1</b> já teve a armadilha dele achada. Como ele só precisava de uma, as <b>outras vizinhas de mato</b> (as que piscam) estão <b>livres</b>! Pode limpar sem medo. Muito bem, Dudu!... 😅 ai, me perdoa — <b>{NAME}</b>! Confundi com meu bisneto.' },
+  { require:'next', onEnter:()=>{ tutHlCell(3,1,'tut-hl'); tutHlCell(3,3,'tut-hl'); tutHlCell(4,2,'tut-hl'); }, text:'Agora as <b>SEGURAS</b> 🌿: aquele <b>1</b> já teve a armadilha dele achada. Como ele só precisava de uma, as <b>outras vizinhas de mato</b> (as que piscam) estão <b>livres</b>! Pode limpar sem medo. Muito bem, Dudu!... 😅 ai, me perdoa — <b>{NAME}</b>! Confundi com o Dudu, meu filho — de vez em quando me embaraço com o nome dele.' },
   { require:'next', onEnter:()=>{ tutHlCell(0,3,'tut-hl'); tutHlCell(0,4,'tut-warn'); tutHlCell(1,4,'tut-warn'); }, text:'E tem as <b>DUVIDOSAS</b> 🤔 (amarelo): veja este <b>1</b> — ele encosta em <b>duas</b> casinhas de mato e a armadilha pode estar em <b>qualquer uma</b>. Aqui a gente <b>não crava</b>! Bom jardineiro <b>não chuta</b> — espera achar mais pistas. 🌱' },
   { require:'next', text:'É assim que se joga <b>sem chutar</b>: cada número é uma pista. Quanto <b>maior e mais difícil</b> a fase, mais armadilhas e <b>números maiores</b> aparecem — e você vai ter que agir como <b>eu deveria</b> agir: com muuuito cuidado! 🐢' },
   { require:'flag:3,2', highlight:[[3,2],'#flagPalette'], text:'Achamos uma armadilha — vamos <b>MARCAR</b> pra não pisar: <b>arraste a bandeirinha 🚩</b> (do canto ➡) até a casinha piscando. (No PC, clique com o botão direito também.)' },
   { require:'next', text:'Isso! 🚩 Marcada. Marcou no lugar errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
   { require:'next', highlight:[[4,2]], text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 (tipo essa) pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
-  { require:'next', highlight:['#mineCount'], onEnter:()=>{ $('#mineCount').style.visibility='visible'; }, text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
+  { require:'next', highlight:['#mineCount'], onEnter:()=>{ const h=document.querySelector('.hud'); if(h) h.style.visibility='visible'; $('#mineCount').style.visibility='visible'; }, text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
   { require:'next', highlight:['#timer'], onEnter:()=>{ $('#timer').style.visibility='visible'; }, text:'E o ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b>! (Rapidinho, que os bisnetos estão chegando 😄)' },
   { require:'next', highlight:['#furyWrap'], onEnter:()=>tutShowFury(false), text:'Agora meu segredo... ⚡ esta é a <b>AURA DA VOVÓ</b>! Eu sou muito sábia e tenho <b>poderes cósmicos</b> ✨ — continuar bebendo vinho toda noite comigo também te leva lá! 🍷 Ela <b>enche com os números</b> que você revela.' },
   { require:'special', highlight:['#furyBtn'], onEnter:()=>tutShowFury(true), text:'Olha, encheu e <b>brilhou</b>! ✨ Quando isso acontece, aperte <b>USAR AURA DA VOVÓ</b>: ela faz uma <b>limpeza geral</b> no jardim pra te ajudar a avançar mais rápido! 🌟' },
   { require:'next', text:'UAU! ☄️✨ A Aura fez uma limpeza geral e adiantou tudo! Poder cósmico não falha, né, querido {NAME}? 🌸' },
   { require:'next', text:'Sobre a <b>PONTUAÇÃO</b> 🏆: quanto <b>maior e mais difícil</b> a fase, <b>mais pontos</b> ela vale! O cálculo é: <b>pontos-base da fase − o tempo + 50 por armadilha</b> que você achou. Rápido e caprichado = topo do <b>ranking</b>!' },
-  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo. Bora de verdade? (E se eu te chamar de Dudu sem querer, releva — na minha idade a gente confunde! 😄👵)' },
+  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo. Bora de verdade? (E se eu te chamar de Dudu — nome do meu filho — sem querer, releva: na minha idade a gente se confunde! 😄👵)' },
 ];
 function clearTutHl(){
   document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
@@ -1648,8 +1646,6 @@ function tutGo(i){
   nx.style.display = showFwd ? '' : 'none';
   nx.textContent = (s.require==='next') ? (s.nextLabel || 'PRÓXIMO ▶') : 'AVANÇAR ▶';
   bk.style.display = (i>0) ? '' : 'none';
-  // recua/translúcido só quando exige uma AÇÃO na fronteira (não quando você está relendo)
-  document.getElementById('tutBanner').classList.toggle('acting', s.require!=='next' && !revisiting);
 }
 function tutBackStep(){ if(tutStep>0) tutGo(tutStep-1); }
 function tutForward(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
@@ -1676,19 +1672,24 @@ function startTutorial(){
   $('#timer').style.visibility='hidden';
   document.getElementById('furyWrap').style.display='none';
   document.getElementById('furyAura').classList.remove('on');
+  // TELA LIMPA: esconde tudo acima do tabuleiro que não explica a jogabilidade
+  // (título, nome da fase, carinha/reiniciar e a dica de baixo). Usa visibility p/ não mexer no layout.
+  ['.arcade-title','#phaseName','#faceBtn','.hud','.hint'].forEach(sel=>{ const e=document.querySelector(sel); if(e) e.style.visibility='hidden'; });
   hideAnna(); fitBoard();
   menuEl.style.display='none'; gameEl.style.display='flex'; overlayEl.style.display='none'; flagPalette.style.display='flex';
   document.getElementById('tutBanner').style.display='flex';
   tutGo(0);
 }
-function endTutorial(){
-  tutorial=false; clearTutHl(); furyBlast=false;
-  $('#mineCount').style.visibility=''; $('#timer').style.visibility='';
+// restaura TODA a UI mexida pelo tutorial (chamado sempre que se volta ao menu,
+// inclusive se o jogador clicar em "↩ MENU" no meio do tutorial)
+function resetTutorialUI(){
+  tutorial=false; furyBlast=false;
+  ['#mineCount','#timer','.arcade-title','#phaseName','#faceBtn','.hud','.hint'].forEach(sel=>{ const e=document.querySelector(sel); if(e) e.style.visibility=''; });
   document.getElementById('furyWrap').style.display='';
   document.getElementById('furyAura').classList.remove('on');
-  const bn=document.getElementById('tutBanner'); bn.style.display='none'; bn.classList.remove('acting');
-  goMenu();
+  const bn=document.getElementById('tutBanner'); if(bn){ bn.style.display='none'; bn.classList.remove('acting'); }
 }
+function endTutorial(){ clearTutHl(); goMenu(); }
 
 function bestKey(){ return 'donaAnna_best_'+cfg.id; }
 function saveBest(t){
@@ -1762,7 +1763,7 @@ window.addEventListener('pointerup', dEnd);
 // ============================================================
 //  LIGAÇÕES DE UI
 // ============================================================
-function goMenu(){ stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
+function goMenu(){ resetTutorialUI(); stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
 $('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))){ S.click(); return; } S.click(); startGame(); };
 $('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
