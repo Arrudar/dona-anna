@@ -810,7 +810,8 @@ function idleComplain(){
 // AJUDA: após 60s sem LIMPAR uma casinha, aponta uma casa segura da borda (pisca verde)
 let helpTO = null;
 function clearHintCell(){ document.querySelectorAll('.cell.hint-safe').forEach(e=>e.classList.remove('hint-safe')); }
-function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, 20000); }
+function helpDelay(){ return 25000 + Math.floor(Math.random()*10001); } // 25–35s aleatório
+function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, helpDelay()); }
 function showSafeHint(){
   if(over || !started) return;
   // preferir casa VAZIA (adj 0 = sem número), que abre bastante espaço; de borda se possível
@@ -831,7 +832,7 @@ function showSafeHint(){
   t.el.classList.add('hint-safe');
   moveAnnaToCell(t.el);
   sayAnna('Psiu... acho que por aqui é seguro limpar! 🌿', 5000, true); // balão VERDE
-  helpTO = setTimeout(showSafeHint, 20000); // reprograma a cada 20s se continuar parada
+  helpTO = setTimeout(showSafeHint, helpDelay()); // reprograma a cada 25–35s se continuar parada
 }
 // reposiciona a vovó se a janela mudar de tamanho
 window.addEventListener('resize', ()=>{
