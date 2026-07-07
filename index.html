@@ -822,7 +822,7 @@ let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
 let clockOn = false; // (legado, não usado no modelo clássico)
-let fury = 0; let furyMax = 10; let furyBlast = false; // especial "Aura da Vovó" (máx por fase: 10,15,20,25)
+let fury = 0; let furyRaw = 0; let furyMax = 10; let furyBlast = false; // especial "Aura da Vovó" (máx por fase: 10,15,20,25). furyRaw = soma bruta dos números; a barra vale ceil(soma/2)
 let tutorial = false, tutStep = 0; // modo tutorial (onboarding)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
@@ -1319,7 +1319,7 @@ function startGame(){
       grid[r][c].el.appendChild(s);
     }
   }
-  fury = 0; furyBlast = false; furyMax = 10 + 5*DIFFICULTIES.indexOf(cfg); updateFuryUI(); // máx por fase: 10/15/20/25
+  fury = 0; furyRaw = 0; furyBlast = false; furyMax = 10 + 5*DIFFICULTIES.indexOf(cfg); updateFuryUI(); // máx por fase: 10/15/20/25
 
   hideAnna();
   fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
@@ -1641,7 +1641,7 @@ function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 //  AURA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
 // ============================================================
 const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
-function addFury(n){ if(furyBlast || tutorial) return; fury = Math.min(furyMax, fury + n); updateFuryUI(); }
+function addFury(n){ if(furyBlast || tutorial) return; furyRaw += n; fury = Math.min(furyMax, Math.ceil(furyRaw/2)); updateFuryUI(); } // cada número vale 1/2 ponto de Aura (soma arredondada pra cima)
 function updateFuryUI(){
   const ready = fury >= furyMax && !over;
   furyFill.style.width = Math.round(fury/furyMax*100) + '%';
@@ -1695,13 +1695,13 @@ function useFury(){
     for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
     if(tutorial){
       safe.forEach(p=>revealCell(grid[p[0]][p[1]], p[0], p[1])); // no tutorial, limpa TUDO
-      furyBlast=false; fury=0; updateFuryUI(); tutAdvance(); return;
+      furyBlast=false; fury=0; furyRaw=0; updateFuryUI(); tutAdvance(); return;
     }
     const low = 10; // elimina entre 10 e o máximo da Aura daquela fase
     const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório 10..furyMax
     const hits = Math.min(n, safe.length);
     for(let i=0;i<hits;i++){ const p=safe[i]; revealCell(grid[p[0]][p[1]], p[0], p[1]); }
-    furyBlast=false; fury=0; updateFuryUI();
+    furyBlast=false; fury=0; furyRaw=0; updateFuryUI();
     checkWin(); // se todas as casas seguras foram eliminadas -> vitória; senão continua jogando
   }, 650);
 }
@@ -1768,7 +1768,7 @@ function startTutorial(){
   cfg = { id:'tut', name:'TUTORIAL', emoji:'🎓', rows:6, cols:6, mines:TUT_MINES.length, start:0 };
   rows=6; cols=6; mineTotal=TUT_MINES.length;
   grid=[]; started=true; over=false; clockOn=false; flagsUsed=0; revealedCount=0; timer=0; stopTimer();
-  blockedCount=0; blockBr=0; fury=0; furyBlast=false; furyMax=5;
+  blockedCount=0; blockBr=0; fury=0; furyRaw=0; furyBlast=false; furyMax=5;
   faceEl.textContent='👵'; $('#phaseName').textContent='🎓  TUTORIAL'; timerEl.textContent='000';
   boardEl.style.gridTemplateColumns='repeat(6,1fr)'; boardEl.innerHTML='';
   for(let r=0;r<6;r++){ grid[r]=[]; for(let c=0;c<6;c++){
