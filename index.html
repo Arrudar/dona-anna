@@ -179,6 +179,23 @@
   #cometLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:40;}
   .comet{position:absolute;top:0;font-size:36px;filter:drop-shadow(0 0 10px rgba(255,180,60,.95));animation:cometFall linear forwards;}
   @keyframes cometFall{from{transform:translateY(-16vh) rotate(24deg);opacity:0;}12%{opacity:1;}to{transform:translateY(115vh) rotate(24deg);opacity:.85;}}
+  /* shake suave do tabuleiro ao usar o especial (amortecido, não "bug") */
+  .board-wrap.shaking{animation:boardShake .72s cubic-bezier(.36,.07,.19,.97);}
+  @keyframes boardShake{
+    0%{transform:translate(0,0) rotate(0);}
+    10%{transform:translate(-9px,3px) rotate(-.7deg);}
+    24%{transform:translate(8px,-3px) rotate(.6deg);}
+    38%{transform:translate(-6px,2px) rotate(-.45deg);}
+    52%{transform:translate(5px,-2px) rotate(.35deg);}
+    66%{transform:translate(-3px,1px) rotate(-.22deg);}
+    80%{transform:translate(2px,-1px) rotate(.12deg);}
+    100%{transform:translate(0,0) rotate(0);}
+  }
+  /* aura neon amarelada ao redor da tela quando a Fúria está carregada */
+  #furyAura{position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:0;transition:opacity .4s ease;
+    box-shadow:inset 0 0 55px 12px rgba(255,214,90,.6), inset 0 0 150px 34px rgba(255,190,40,.28);}
+  #furyAura.on{opacity:1;animation:auraPulse 1.6s ease-in-out infinite;}
+  @keyframes auraPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 
   .board-wrap{
     perspective:1100px;perspective-origin:50% 24%;
@@ -246,6 +263,7 @@
     color:#2a1c0c;
   }
   .cell.flag{filter:saturate(1.2);}
+  .cell.bloom{animation:pop .5s ease;} /* flores desabrochando na vitória */
   .cell.boom{
     background:radial-gradient(circle,#ff7a2a,#c02323 70%);
     box-shadow:0 0 18px 4px rgba(255,90,30,.8),inset 0 0 0 2px #000;
@@ -601,6 +619,8 @@
     <div id="annaBubble"></div>
   </div>
 
+  <div id="furyAura"></div>
+
   <div class="credits">© FAZENDA GRUNGE GAMES • INSERT COIN • 1 PLAYER</div>
 
 <script>
@@ -643,8 +663,8 @@ const LOSE_SCENES = [
 ];
 
 const WIN_QUIPS = [
-  'Obrigada por limpar o jardim comigo, meu anjo! 🌷 Você merece um café com lanchinho: uma abobrinha batidinha ou uma lasanha com plástico? Hihihi 😋',
-  'Que capricho, ficou lindo! 🌻 Você merece um café com lanchinho: uma abobrinha batidinha ou uma lasanha com plástico? Hihihi 😋',
+  'Ai, muito obrigada por me ajudar na limpeza, meu anjo! 🌷 Olha só como o jardim ficou lindo e florido! 🌸🌻 Você merece um café com lanchinho: uma abobrinha batidinha ou uma lasanha com plástico? Hihihi 😋',
+  'Que benção! Graças a você o jardim ficou limpinho e todo florido. 🌺💐 Muito obrigada mesmo! Aceita um café com lanchinho: uma abobrinha batidinha ou uma lasanha com plástico? Hihihi 😋',
 ];
 
 // ---------- ESTADO ----------
@@ -1333,10 +1353,11 @@ function checkWin(){
     faceEl.textContent = '😎';
     setAnnaFace('😎');
     S.win();
-    // marca todos os perigos com óculos "encontrados"
+    // jardim limpo: os perigos viram FLORES (jardim lindo e florido)
+    const WFLOWERS=['🌷','🌸','🌻','🌼','🌹','💐','🏵️','🌺'];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
       const cell = grid[r][c];
-      if(cell.mine){ cell.el.classList.add('flag'); cell.el.textContent='👓'; }
+      if(cell.mine){ cell.el.classList.add('flag','bloom'); cell.el.textContent = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)]; }
     }
     saveBest(timer);
     setTimeout(()=>endScreen(true, null), 700);
@@ -1423,6 +1444,7 @@ function updateFuryUI(){
   furyVal.textContent = fury + '/' + furyMax;
   furyWrap.classList.toggle('ready', ready);
   furyBtn.style.display = ready ? '' : 'none';
+  const aura = document.getElementById('furyAura'); if(aura) aura.classList.toggle('on', ready); // neon na tela
 }
 function dropComets(){
   cometLayer.innerHTML='';
@@ -1443,8 +1465,8 @@ function useFury(){
   furyBtn.style.display='none';
   if(soundOn){ beep(160,0.5,'sawtooth',0.2,60); [660,880,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.15),120+i*90)); }
   dropComets();
-  document.body.classList.add('screen-shake');
-  setTimeout(()=>document.body.classList.remove('screen-shake'), 600);
+  const bw = document.querySelector('.board-wrap');
+  if(bw){ bw.classList.remove('shaking'); void bw.offsetWidth; bw.classList.add('shaking'); setTimeout(()=>bw.classList.remove('shaking'), 720); }
   furyBlast = true;
   setTimeout(()=>{
     // cometas ELIMINAM um número aleatório de casas (entre 10 e o máx da fase), só em casas
