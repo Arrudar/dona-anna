@@ -804,6 +804,8 @@ const TICKS  = ['Tá cheio de carrapato aqui!', 'Vou criar teia esperando você.
 const BUILD_TALK = ['Ai, ai... vou fazer um café pra te esperar pensar ☕', 'Enquanto você decide, vou regar as plantinhas 🌱', 'Tá pensando ou cochilando, meu bem?', 'Vou dar uma sentadinha aqui na varanda...', 'Cadê a agilidade, criança? 🐌', 'Acho que vou fazer uma caipirinha enquanto te espero. Quer? 🍸'];
 // Passa perto de uma armadilha escondida enquanto passeia pelo jardim já limpo
 const TRAP_QUIPS = ['Eita! Se não fosse você, era mais duas semanas no xarope! 😅', 'Ui, quase! Sua vó no hospital de novo não, viu? 🙈', 'Cruzes, que perigo! Ainda bem que te tenho, meu bem 🍀', 'Xiii... por um triz! Já tava sentindo cheirinho de arnica 😬', 'Nossa Senhora! Essa cilada quase pega essa velha 😰', 'Fiu! De boa contigo por perto, criança 🌿', 'Óia o susto! Meu coração de vó não aguenta, viu? 💓', 'Quase escorreguei igual da última vez... adeus quadril! 🦴'];
+// 1º clique: o cronômetro começa a correr
+const START_QUIPS = ['Lá começou o relógio! Bora limpar rapidinho, {NAME} ⏱️', 'Cronômetro ligado, meu bem! Quanto mais rápido, mais pontos 😉', 'O tempo tá correndo agora, criança! Mãos à terra 🌱', 'Já ligou a contagem! Vamo que vamo, {NAME}? ⏳', 'Tique-taque, tique-taque... sem enrolar, viu! 🕰️'];
 // Vitória: passeando feliz pelo jardim todo limpo
 const JOY_QUIPS = ['Ai, como eu amo esse jardim! 🌸', 'Isso aqui me energiza, viu, meu bem! ✨', 'Passear no meu jardim é vida! 🌻', 'Melhor que isso, só os bisnetos por perto 💛', 'Tô me sentindo mocinha de novo! 🦋', 'Cada florzinha dessas é uma alegria 🌷', 'Respira esse arzinho... que delícia! 🍃', 'Meu jardim lindo de novo, graças a você! 🌼', 'Dá até vontade de dançar aqui no meio das flores 💃', 'Que paz, que cheirinho bom... isso é que é viver! 😌'];
 
@@ -1509,9 +1511,12 @@ function onReveal(r,c){
   if(cell.revealed) return;
   if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
-  if(!started){ started = true; placeMines(r,c); startTimer(); furyFirstMove = true; } // 1º clique posiciona minas (sempre seguro); marca a jogada pra descontar a Aura da clareira inicial
-
-  moveAnnaToCell(cell.el); // a vovó caminha até a casa clicada
+  if(!started){ // 1º clique: posiciona minas (sempre seguro), começa o cronômetro e a vovó vem comentar
+    started = true; placeMines(r,c); startTimer(); furyFirstMove = true; // marca a jogada pra descontar a Aura da clareira inicial
+    moveAnnaToCell(cell.el); // só nesse 1º clique ela caminha até a casa
+    sayAnna(pick(START_QUIPS).replace('{NAME}', playerName||'meu bem'), 3200);
+  }
+  // dos cliques seguintes em diante ela NÃO vem mais até o clique — passeia sozinha pelo já limpo
 
   if(cell.mine){
     revealCell(cell, r, c);
@@ -1578,8 +1583,7 @@ function onFlag(r,c){
     cell.el.textContent = '🚩';
     flagsUsed++;
     S.flag();
-    moveAnnaToCell(cell.el);
-    sayAnna(pick(DISARM));
+    sayAnna(pick(DISARM)); // comenta de onde estiver, sem largar o passeio pra vir até aqui
   }else{
     cell.el.classList.remove('flag');
     cell.el.textContent = '';
