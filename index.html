@@ -1290,7 +1290,7 @@ function startGame(){
   stopTimer();
   faceEl.textContent = '👵';
   $('#phaseName').textContent = cfg.emoji + '  ' + cfg.name; // nome da fase no topo
-  timerEl.textContent = '000';
+  timerEl.textContent = '00:00';
   updateMineCount();
   showBest();
 
@@ -1543,6 +1543,32 @@ function loseGame(hitCell){
   setTimeout(()=>endScreen(false, hitCell.hazard), 2000); // deixa ~2s p/ o jogador ver onde pisou
 }
 
+// "perigo" do estouro de tempo (59:59) — usado no Game Over automático
+const TIME_HAZARD = { emoji:'⏰', name:'O relógio', why:'Passeio de vovó também tem hora pra acabar!',
+  quip:'O tempo escapou por entre as flores... 59:59 e o serviço não terminou! Bora de novo, com um tiquinho mais de pressa. ⏰',
+  scene:{ art:'⏰🌙', cap:'A tarde virou noite e o jardim continuou ali, esperando a vovó.' } };
+function loseByTime(){
+  if(over) return;
+  over = true; stopTimer();
+  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
+  faceEl.textContent = '😵'; setAnnaFace('😵'); annaBubble.classList.remove('show');
+  S.boom();
+  document.body.classList.add('screen-shake');
+  setTimeout(()=>document.body.classList.remove('screen-shake'), 450);
+  // revela todas as armadilhas em vermelho (sem "pisada" — foi o tempo) + balãozinhos
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const cell = grid[r][c];
+    if(cell.mine){
+      cell.el.classList.add('open','hz-reveal');
+      cell.el.textContent = cell.hazard.emoji;
+      cell.el.style.opacity = '1';
+      attachTip(cell.el, `<b>${cell.hazard.name}</b> — ${cell.hazard.why}`);
+    }
+    if(cell.flagged && !cell.mine){ cell.el.classList.add('wrongflag'); cell.el.textContent = '❌'; }
+  }
+  setTimeout(()=>endScreen(false, TIME_HAZARD), 2000);
+}
+
 function checkWin(){
   if(tutorial) return;                       // tutorial não tem vitória/derrota normal
   const safe = rows*cols - mineTotal - blockedCount; // construção não conta
@@ -1580,7 +1606,7 @@ async function endScreen(win, hazard){
   if(win){
     scene.style.display='none'; scene.innerHTML='';
   }else{
-    const s = pick(LOSE_SCENES);
+    const s = hazard.scene || pick(LOSE_SCENES);
     scene.style.display='block';
     scene.innerHTML = `<div class="art">${s.art}</div><div class="cap">${s.cap}</div>`;
   }
@@ -1628,11 +1654,13 @@ function updateMineCount(){
   const left = Math.max(0, mineTotal - flagsUsed);
   mineCountEl.textContent = '🪤 ' + String(left).padStart(3,'0');
 }
+function fmtTime(s){ s=Math.max(0,Math.min(s,3599)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); } // MM:SS (limite 59:59)
 function startTimer(){
   stopTimer();
   timerInt = setInterval(()=>{
     timer++;
-    timerEl.textContent = String(Math.min(timer,999)).padStart(3,'0');
+    if(timer > 3599){ timer = 3599; timerEl.textContent = fmtTime(timer); return loseByTime(); } // estourou 59:59 -> Game Over automático
+    timerEl.textContent = fmtTime(timer);
   }, 1000);
 }
 function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
@@ -1769,7 +1797,7 @@ function startTutorial(){
   rows=6; cols=6; mineTotal=TUT_MINES.length;
   grid=[]; started=true; over=false; clockOn=false; flagsUsed=0; revealedCount=0; timer=0; stopTimer();
   blockedCount=0; blockBr=0; fury=0; furyRaw=0; furyBlast=false; furyMax=5;
-  faceEl.textContent='👵'; $('#phaseName').textContent='🎓  TUTORIAL'; timerEl.textContent='000';
+  faceEl.textContent='👵'; $('#phaseName').textContent='🎓  TUTORIAL'; timerEl.textContent='00:00';
   boardEl.style.gridTemplateColumns='repeat(6,1fr)'; boardEl.innerHTML='';
   for(let r=0;r<6;r++){ grid[r]=[]; for(let c=0;c<6;c++){
     const el=document.createElement('div'); el.className='cell'; el.dataset.r=r; el.dataset.c=c;
