@@ -319,7 +319,9 @@
   .rank-head,.rank-row{display:grid;grid-template-columns:30px 1fr 72px 1.05fr 56px;gap:6px;align-items:center;
     font-family:Georgia,serif;font-weight:normal;font-size:12px;padding:5px 8px;text-align:left;}
   .rank-head{color:#8a7550;border-bottom:1px solid #4a2f16;letter-spacing:1px;text-transform:uppercase;font-size:10px;}
-  .ranklist{max-height:320px;overflow-y:auto;margin-top:4px;}
+  .ranklist{max-height:210px;overflow-y:auto;margin-top:2px;}
+  .rank-sec-title{color:var(--amber);font-size:12px;letter-spacing:1px;margin:12px 0 3px;text-align:left;text-shadow:0 1px 0 #000;}
+  #rankOverlay .panel{max-height:90vh;overflow-y:auto;}
   .rank-row{color:#d9c9a6;border-bottom:1px solid rgba(90,58,28,.3);}
   .rank-row:nth-child(1){color:var(--amber);font-weight:bold;}
   .rank-row .pos{font-weight:bold;color:var(--amber);}
@@ -540,7 +542,8 @@
       <p class="quip" id="endQuip"></p>
       <p class="stat" id="endResult"></p>
       <div class="mini-detail" id="endDetail"></div>
-      <div class="mini-rank" id="endTop3"></div>
+      <div class="mini-rank" id="endRankAll"></div>
+      <div class="mini-rank" id="endRankToday"></div>
       <div class="panel-actions">
         <button class="btn green" id="nextBtn" style="display:none;">🌿 JOGAR NUM JARDIM MAIOR</button>
         <button class="btn" id="againBtn">↻ JOGAR DE NOVO</button>
@@ -553,8 +556,12 @@
   <div id="rankOverlay">
     <div class="panel">
       <h2 class="win" id="rankTitle" style="font-size:26px;">🏆 RANKING</h2>
+      <div class="rank-sec-title">🏆 TOP 20 · TODOS OS TEMPOS</div>
       <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
-      <div id="rankList" class="ranklist"></div>
+      <div id="rankListAll" class="ranklist"></div>
+      <div class="rank-sec-title">☀️ HOJE · TODOS OS JOGADORES</div>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
+      <div id="rankListToday" class="ranklist"></div>
       <div class="panel-actions" style="margin-top:14px;">
         <button class="btn" id="rankClose">VOLTAR</button>
       </div>
@@ -1036,30 +1043,51 @@ async function sbAll(limit){
     return await r.json();
   }catch(err){ return null; }
 }
+// início de HOJE em GMT-3 (Brasil), como ISO UTC
+function todayStartISO(){
+  const d = new Date(Date.now() - 3*3600*1000); // desloca p/ o "relógio" de GMT-3
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 0, 0)).toISOString();
+}
+async function sbToday(limit){
+  try{
+    const r = await fetch(SB_URL+`/scores?select=name,score,time,diff,created_at&created_at=gte.${todayStartISO()}&order=score.desc,created_at.asc&limit=${limit}`, { headers:SB_H });
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(err){ return null; }
+}
+function noTest(list){ return (list||[]).filter(e => e.name !== 'TESTE-SETUP'); } // remove o teste antigo
 // lista já vem ordenada por score desc -> a 1ª ocorrência de cada nome é a maior
 function dedupeByName(list){
   const seen = new Set(), out = [];
   for(const e of list){ if(seen.has(e.name)) continue; seen.add(e.name); out.push(e); }
   return out;
 }
-// normaliza entradas (local usa .when em ms; remoto usa .created_at ISO)
 function rankRowsHTML(list){
   return list.map((e,i)=>
     `<div class="rank-row"><span class="pos">${i+1}º</span><span class="nm">${escapeHtml(e.name)}</span>`+
     `<span class="dt">${fmtDate(e.when||e.created_at)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span></div>`
   ).join('');
 }
+function miniRows(list){
+  return list.map((e,i)=>
+    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
+    `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when||e.created_at)}</span><span class="mr-sc">${e.score}</span></div>`
+  ).join('');
+}
 async function renderRank(){
-  const el = $('#rankList');
-  el.innerHTML = '<div class="rank-empty">Carregando ranking compartilhado… 🌐</div>';
-  const all = await sbAll(1000);
-  let list, note = '';
-  if(all===null){ list = dedupeByName(loadRank()); note = ' (local — sem conexão)'; }
-  else { list = dedupeByName(all); }
-  list = list.slice(0,20); // TOP 20, um resultado por nome (o maior)
+  const elAll = $('#rankListAll'), elToday = $('#rankListToday');
+  elAll.innerHTML = elToday.innerHTML = '<div class="rank-empty">Carregando… 🌐</div>';
+  const allRaw = await sbAll(1000), todayRaw = await sbToday(500);
+  // TODOS OS TEMPOS: top 20, um por nome (o maior)
+  let allList, note='';
+  if(allRaw===null){ allList = dedupeByName(noTest(loadRank())); note=' (local — sem conexão)'; }
+  else { allList = dedupeByName(noTest(allRaw)); }
+  allList = allList.slice(0,20);
   $('#rankTitle').textContent = '🏆 RANKING' + note;
-  if(!list.length){ el.innerHTML='<div class="rank-empty">Ninguém no ranking ainda. Seja a primeira, vovó! 🌷</div>'; return; }
-  el.innerHTML = rankRowsHTML(list);
+  elAll.innerHTML = allList.length ? rankRowsHTML(allList) : '<div class="rank-empty">Ninguém ainda. Seja a primeira! 🌷</div>';
+  // HOJE (GMT-3): TODAS as jogadas de todos os jogadores de hoje (sem dedupe)
+  const todayList = (todayRaw===null) ? [] : noTest(todayRaw);
+  elToday.innerHTML = todayList.length ? rankRowsHTML(todayList) : '<div class="rank-empty">Ninguém jogou hoje ainda. 🌅</div>';
 }
 
 // ============================================================
@@ -1395,26 +1423,23 @@ async function endScreen(win, hazard){
   $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
     `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
-  $('#endTop3').innerHTML = '<div class="mr-title">🏆 TOP 3 (todos)</div><div class="mr-loading">carregando ranking compartilhado…</div>';
+  $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
+  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div><div class="mr-loading">carregando…</div>';
   overlayEl.style.display='flex';
 
-  // ---- ranking COMPARTILHADO (Supabase) com fallback local; nomes únicos (maior de cada) ----
+  // ---- rankings COMPARTILHADOS (Supabase): todos os tempos (nomes únicos) + hoje (todas as jogadas) ----
   await sbInsert(entry);
-  const all = await sbAll(1000);
-  const shared = (all !== null);
-  const uniq = dedupeByName(shared ? all : loadRank());
-  const rank = uniq.findIndex(e => e.name === entry.name) + 1;
-  const list = uniq.slice(0,3);
-  const posText = shared
-    ? (rank>0 ? `${rank}º no mundo 🌍` : '—')
-    : `${rank>0?rank:localPos}º (local, offline)`;
-  const title = shared ? '🏆 TOP 3 (todos)' : '🏆 TOP 3 (local, offline)';
-
+  const allRaw = await sbAll(1000), todayRaw = await sbToday(500);
+  const shared = (allRaw !== null);
+  const uniqAll = dedupeByName(noTest(shared ? allRaw : loadRank()));
+  const rank = uniqAll.findIndex(e => e.name === entry.name) + 1;
+  const posText = shared ? (rank>0 ? `${rank}º no mundo 🌍` : '—') : `${rank>0?rank:localPos}º (local, offline)`;
   const posEl = $('#endPos'); if(posEl) posEl.textContent = posText;
-  $('#endTop3').innerHTML = `<div class="mr-title">${title}</div>` + list.map((e,i)=>
-    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
-    `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when||e.created_at)}</span><span class="mr-sc">${e.score}</span></div>`
-  ).join('');
+
+  $('#endRankAll').innerHTML = `<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS${shared?'':' (local)'}</div>` + miniRows(uniqAll.slice(0,5));
+  const todayList = (shared && todayRaw!==null) ? noTest(todayRaw) : [];
+  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div>' +
+    (todayList.length ? miniRows(todayList.slice(0,10)) : '<div class="mr-loading">ninguém hoje ainda 🌅</div>');
 }
 
 // ============================================================
