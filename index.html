@@ -1026,18 +1026,24 @@ function helpDelay(){ return 35000 + Math.floor(Math.random()*10001); } // 35–
 function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, helpDelay()); }
 function showSafeHint(){
   if(over || !started) return;
-  // preferir casa VAZIA (adj 0 = sem número), que abre bastante espaço; de borda se possível
-  const vazBorda=[], vazQualquer=[], seguraQualquer=[];
+  // SEMPRE apontar pra perto do que já foi descoberto (casa na fronteira). Entre essas,
+  // preferir casa VAZIA (adj 0 = sem número), que abre bastante espaço.
+  const frontVaz=[], frontQualquer=[], vazQualquer=[], seguraQualquer=[];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     const g = grid[r][c];
     if(g.mine || g.revealed || g.flagged || g.blocked) continue;
     seguraQualquer.push(g);
+    const front = isFrontier(r,c);
+    if(front) frontQualquer.push(g);
     if(g.adj===0){
       vazQualquer.push(g);
-      if(r===0 || r===rows-1 || c===0 || c===cols-1) vazBorda.push(g);
+      if(front) frontVaz.push(g);
     }
   }
-  const pool = vazBorda.length ? vazBorda : (vazQualquer.length ? vazQualquer : seguraQualquer);
+  const pool = frontVaz.length ? frontVaz
+             : frontQualquer.length ? frontQualquer
+             : vazQualquer.length ? vazQualquer
+             : seguraQualquer;
   if(!pool.length) return;
   const t = pool[Math.floor(Math.random()*pool.length)];
   clearHintCell();
@@ -1399,6 +1405,44 @@ function forEachNeighbor(r,c,fn){
   }
 }
 
+// FRONTEIRA: uma casa está "na fronteira" se faz divisa (8-dir) com alguma casa
+// já revelada ou já marcada — ou seja, é vizinha do que o jogador já descobriu.
+function isFrontier(r,c){
+  let front=false;
+  forEachNeighbor(r,c,(nr,nc)=>{ const g=grid[nr][nc]; if(g.revealed || g.flagged) front=true; });
+  return front;
+}
+
+// Ordena TODAS as casas seguras (não-mina, não-reveladas, não-marcadas, não-construção)
+// por PROXIMIDADE da região já descoberta. BFS multi-origem: as origens são todas as
+// casas já reveladas/marcadas (distância 0); cresce pra fora casa a casa. Assim, pegar
+// as N primeiras garante que são as N casas seguras mais próximas do que já foi descoberto.
+function safeCellsByProximity(){
+  const dist = Array.from({length:rows},()=>new Array(cols).fill(-1));
+  const queue = [];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const g=grid[r][c];
+    if(g.revealed || g.flagged){ dist[r][c]=0; queue.push([r,c]); }
+  }
+  if(!queue.length){ // nada descoberto ainda: fallback — todas as casas seguras (row-major)
+    const all=[];
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.blocked && !g.revealed && !g.flagged) all.push([r,c]); }
+    return all;
+  }
+  const order=[]; let head=0;
+  while(head < queue.length){
+    const [r,c] = queue[head++];
+    forEachNeighbor(r,c,(nr,nc)=>{
+      if(dist[nr][nc] !== -1) return;      // já visitada
+      dist[nr][nc] = dist[r][c]+1;
+      const g=grid[nr][nc];
+      if(!g.mine && !g.blocked && !g.revealed && !g.flagged) order.push([nr,nc]); // só coleta as seguras clicáveis
+      queue.push([nr,nc]);                 // continua a BFS por todas (minas/construção só de passagem) p/ ordenar tudo
+    });
+  }
+  return order; // da mais próxima da fronteira para a mais distante
+}
+
 // ============================================================
 //  REVELAR
 // ============================================================
@@ -1718,10 +1762,9 @@ function useFury(){
   if(bw){ bw.classList.remove('shaking'); void bw.offsetWidth; bw.classList.add('shaking'); setTimeout(()=>bw.classList.remove('shaking'), 720); }
   furyBlast = true;
   setTimeout(()=>{
-    // cometas revelam casas AINDA NÃO CLICADAS e SEM armadilhas (!mine, !revealed, !flagged)
-    const safe=[];
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.revealed && !g.flagged) safe.push([r,c]); }
-    for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
+    // cometas revelam casas AINDA NÃO CLICADAS e SEM armadilhas, SEMPRE as mais
+    // próximas do que já foi descoberto (ordenadas por proximidade da fronteira).
+    const safe = safeCellsByProximity();
     if(tutorial){
       safe.forEach(p=>revealCell(grid[p[0]][p[1]], p[0], p[1])); // no tutorial, limpa TUDO
       furyBlast=false; fury=0; furyRaw=0; updateFuryUI(); tutAdvance(); return;
