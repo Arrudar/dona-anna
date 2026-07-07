@@ -109,6 +109,10 @@
   }
   .diff:hover{transform:translateY(-3px);border-color:var(--rust);}
   .diff.active{border-color:var(--amber);box-shadow:0 6px 0 #0c0804,0 0 18px rgba(255,178,40,.5);}
+  .diff.locked{opacity:.5;filter:grayscale(.6);cursor:not-allowed;}
+  .diff.locked:hover{transform:none;border-color:#000;}
+  .diff.locked .name{color:#8a7550;}
+  .diff.locked .meta{color:#8a6a3a;font-style:italic;}
   .diff .emoji{font-size:34px;display:block;filter:drop-shadow(0 3px 3px rgba(0,0,0,.7));}
   .diff .name{display:block;color:var(--bone);letter-spacing:1px;margin:6px 0 2px;font-size:15px;}
   .diff .meta{display:block;font-size:11px;color:#a3906c;font-weight:normal;font-family:Georgia,serif;}
@@ -563,9 +567,10 @@
 
 // ---------- CONFIG ----------
 const DIFFICULTIES = [
-  { id:'soneca', emoji:'🌷', name:'PASSEIO NO JARDIM',  meta:'9×9 · 10 perigos · base 1500',   rows:9,  cols:9,  mines:10, start:1500 },
-  { id:'feira',  emoji:'🌳', name:'VOLTA NO PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500 },
-  { id:'netos',  emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 99 perigos · base 3500', rows:16, cols:30, mines:99, start:3500 },
+  { id:'sede',      emoji:'🌵', name:'JARDIM DA SEDE',      meta:'9×9 · 10 perigos · base 1500',    rows:9,  cols:9,  mines:10,  start:1500 },
+  { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500',  rows:16, cols:16, mines:40,  start:2500 },
+  { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos · base 3500',  rows:16, cols:30, mines:70,  start:3500 },
+  { id:'amazonia',  emoji:'🐍', name:'AMAZÔNIA',            meta:'22×30 · 100 perigos · base 4500', rows:22, cols:30, mines:100, start:4500, snakeHeavy:true },
 ];
 
 // Perigos (minas). Cada um tem emoji + som próprio (sfx) + fala irônica de game over.
@@ -980,15 +985,46 @@ async function renderRank(){
 // ============================================================
 //  MENU
 // ============================================================
+// ---- PROGRESSÃO: cada nome só abre a próxima fase após vencer a anterior ----
+let unlockedSet = new Set([0]);
+function unlockKey(){ return 'donaAnna_unlocked_'+(playerName||'?'); }
+function loadUnlockCache(){
+  try{ unlockedSet = new Set(JSON.parse(LS.get(unlockKey())||'[0]')); }catch(e){ unlockedSet = new Set([0]); }
+  unlockedSet.add(0); // 1ª fase sempre liberada
+}
+function localCompletedNames(){          // fases vencidas por este nome (histórico local)
+  const s = new Set();
+  loadRank().forEach(e=>{ if(e.name===playerName && e.won) s.add(e.diff); });
+  return s;
+}
+function recomputeUnlocks(completed){
+  unlockedSet = new Set([0]);
+  for(let i=1;i<DIFFICULTIES.length;i++){ if(completed.has(DIFFICULTIES[i-1].name)) unlockedSet.add(i); }
+  LS.set(unlockKey(), JSON.stringify([...unlockedSet]));
+  if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))) cfg = DIFFICULTIES[0]; // fase selecionada travou -> volta pra 1ª
+}
+async function refreshUnlocks(){
+  const completed = localCompletedNames();     // começa com vitórias locais
+  try{
+    const r = await fetch(SB_URL+`/scores?select=diff&won=eq.true&name=eq.${encodeURIComponent(playerName)}`, { headers:SB_H });
+    if(r.ok){ (await r.json()).forEach(x=>completed.add(x.diff)); }
+  }catch(e){}
+  recomputeUnlocks(completed);
+  buildMenu();
+}
+function renderMenu(){ loadUnlockCache(); buildMenu(); refreshUnlocks(); }
+
 function buildMenu(){
   diffEl.innerHTML = '';
   DIFFICULTIES.forEach((d,i)=>{
+    const locked = !unlockedSet.has(i);
     const card = document.createElement('div');
-    card.className = 'diff' + (d.id===cfg.id?' active':'');
-    card.innerHTML = `<span class="emoji">${d.emoji}</span>
+    card.className = 'diff' + (d.id===cfg.id?' active':'') + (locked?' locked':'');
+    card.innerHTML = `<span class="emoji">${locked?'🔒':d.emoji}</span>
       <span class="name">${d.name}</span>
-      <span class="meta">${d.meta}</span>`;
+      <span class="meta">${locked?'Termine a fase anterior':d.meta}</span>`;
     card.onclick = ()=>{
+      if(locked){ S.click(); card.classList.add('shake-panel'); setTimeout(()=>card.classList.remove('shake-panel'),400); return; }
       cfg = d; S.click();
       document.querySelectorAll('.diff').forEach(c=>c.classList.remove('active'));
       card.classList.add('active');
@@ -1056,6 +1092,12 @@ function fitBoard(){
   if(wrap) wrap.classList.toggle('scrollmode', boardW > vw - 40); // não coube -> rola horizontal
 }
 
+// sorteia o perigo de uma mina; na Amazônia, ~75% são cobras 🐍
+function pickHazard(){
+  if(cfg.snakeHeavy && Math.random() < 0.75) return HAZARDS[0]; // HAZARDS[0] = cobra
+  return HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
+}
+
 // posiciona minas DEPOIS do 1º clique (nunca morre de cara)
 function placeMines(safeR, safeC){
   const forbidden = new Set();
@@ -1069,7 +1111,7 @@ function placeMines(safeR, safeC){
     if(grid[r][c].mine) continue;
     if(forbidden.has(r+','+c)) continue;
     grid[r][c].mine = true;
-    grid[r][c].hazard = HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
+    grid[r][c].hazard = pickHazard();
     placed++;
   }
   // calcular números vizinhos
@@ -1243,6 +1285,8 @@ async function endScreen(win, hazard){
   const entry = { name: playerName || 'Anônima', score: cs.score, time: timer, diff: cfg.name, id: cfg.id, won: win, when: Date.now() };
   const localPos = recordLocal(entry);   // fallback offline
   lastScore = cs.score;
+  if(win){ const wi = DIFFICULTIES.indexOf(cfg); // venceu -> libera a próxima fase para este nome
+    if(wi>=0 && wi+1<DIFFICULTIES.length){ unlockedSet.add(wi+1); LS.set(unlockKey(), JSON.stringify([...unlockedSet])); } }
 
   $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
@@ -1315,6 +1359,7 @@ function confirmName(){
   playerName = v.slice(0,14);
   LS.set('donaAnna_name', playerName);
   namePopup.style.display='none';
+  renderMenu();               // atualiza as fases liberadas para ESTE nome
   if(musicOn) Music.start(); // 1º gesto garantido para o áudio
   if(LS.get('donaAnna_rules_seen') !== '1') openRules(); // briefing no 1º acesso
 }
@@ -1352,8 +1397,8 @@ window.addEventListener('pointerup', dEnd);
 // ============================================================
 //  LIGAÇÕES DE UI
 // ============================================================
-function goMenu(){ stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; buildMenu(); }
-$('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } S.click(); startGame(); };
+function goMenu(){ stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
+$('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))){ S.click(); return; } S.click(); startGame(); };
 $('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
 $('#soundToggle').onclick = $('#soundToggle2').onclick = ()=>toggleSound();
