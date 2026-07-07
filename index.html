@@ -197,6 +197,28 @@
   #furyAura.on{opacity:1;animation:auraPulse 1.6s ease-in-out infinite;}
   @keyframes auraPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 
+  /* ===================== TUTORIAL ===================== */
+  #tutBanner{display:none;position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+    width:min(680px,94vw);z-index:9992;align-items:center;gap:12px;
+    background:linear-gradient(180deg,#2a1c10,#140d07);border:3px solid #000;border-top-color:#5a3a1c;
+    border-radius:12px;padding:13px 15px;box-shadow:0 16px 44px rgba(0,0,0,.75);}
+  .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));animation:annaIdle 1.9s ease-in-out infinite;}
+  .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#f0e2c4;text-align:left;}
+  .tut-text b{color:var(--amber);}
+  .tut-btns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
+  #tutBanner .btn{padding:8px 14px;font-size:13px;}
+  /* destaque piscante (casa ou elemento do painel) */
+  .tut-hl{position:relative;z-index:600;border-radius:6px;
+    outline:3px solid #4dff5a;outline-offset:1px;animation:tutPulse .9s ease-in-out infinite;}
+  @keyframes tutPulse{
+    0%,100%{box-shadow:0 0 0 3px rgba(70,255,100,.35),0 0 12px 3px rgba(70,255,100,.6);}
+    50%{box-shadow:0 0 0 4px rgba(70,255,100,.6),0 0 22px 7px rgba(70,255,100,.95);}
+  }
+  @media (max-width:620px){
+    #tutBanner{flex-direction:column;gap:8px;padding:11px 12px;bottom:8px;}
+    .tut-btns{flex-direction:row;}
+  }
+
   .board-wrap{
     perspective:1100px;perspective-origin:50% 24%;
     padding:10px 6px 40px;width:100%;display:flex;justify-content:center;
@@ -496,6 +518,7 @@
 
       <div class="menu-actions">
         <button class="btn" id="startBtn">▶ COMEÇAR</button>
+        <button class="btn ghost sm" id="tutBtn">🎓 TUTORIAL</button>
         <button class="btn ghost sm" id="rulesBtn">📖 REGRAS</button>
         <button class="btn ghost sm" id="rankBtn">🏆 RANKING</button>
         <button class="btn ghost sm" id="nameChange">✎ TROCAR NOME</button>
@@ -506,7 +529,7 @@
     <div id="game">
       <div id="phaseName"></div>
       <div class="hud">
-        <div class="counter" id="mineCount" title="Perigos restantes">🐍 000</div>
+        <div class="counter" id="mineCount" title="Armadilhas restantes">🪤 000</div>
         <div class="face" id="faceBtn" title="Reiniciar">👵</div>
         <div class="counter time" id="timer" title="Tempo">000</div>
       </div>
@@ -626,6 +649,16 @@
     <div id="annaBubble"></div>
   </div>
 
+  <!-- ===================== TUTORIAL (banner da vovó) ===================== -->
+  <div id="tutBanner">
+    <div class="tut-face">👵</div>
+    <div class="tut-text" id="tutText"></div>
+    <div class="tut-btns">
+      <button class="btn" id="tutNext">PRÓXIMO ▶</button>
+      <button class="btn ghost sm" id="tutSkip">PULAR</button>
+    </div>
+  </div>
+
   <div id="furyAura"></div>
 
   <div class="credits">© FAZENDA GRUNGE GAMES • INSERT COIN • 1 PLAYER</div>
@@ -687,6 +720,7 @@ let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
 let clockOn = false; // (legado, não usado no modelo clássico)
 let fury = 0; let furyMax = 10; let furyBlast = false; // especial "Fúria da Vovó" (máx por fase: 10,15,20,25)
+let tutorial = false, tutStep = 0; // modo tutorial (onboarding)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
 const _ls = (()=>{ try{ return window.localStorage; }catch(e){ return null; } })();
@@ -1267,6 +1301,12 @@ function onReveal(r,c){
   if(over) return;
   const cell = grid[r][c];
   if(cell.blocked) return;                  // construção: não clicável
+  if(tutorial){                             // no tutorial, só a casa guiada da vez
+    if(!(TUT[tutStep] && TUT[tutStep].require==='reveal:'+r+','+c)) return;
+    if(cell.revealed || cell.flagged) return;
+    floodReveal(r,c); S.reveal(); updateMineCount(); tutAdvance();
+    return;
+  }
   if(cell.revealed) return;
   if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
@@ -1325,6 +1365,12 @@ function onFlag(r,c){
   if(over || !started) return;
   const cell = grid[r][c];
   if(cell.revealed || cell.blocked) return;
+  if(tutorial){                             // no tutorial, só marca a armadilha guiada
+    if(!(TUT[tutStep] && TUT[tutStep].require==='flag:'+r+','+c)) return;
+    cell.flagged=true; cell.el.classList.add('flag'); cell.el.textContent='🚩'; flagsUsed++;
+    S.flag(); updateMineCount(); tutAdvance();
+    return;
+  }
   cell.flagged = !cell.flagged;
   if(cell.flagged){
     cell.el.classList.add('flag');
@@ -1373,6 +1419,7 @@ function loseGame(hitCell){
 }
 
 function checkWin(){
+  if(tutorial) return;                       // tutorial não tem vitória/derrota normal
   const safe = rows*cols - mineTotal - blockedCount; // construção não conta
   if(revealedCount >= safe){
     over = true;
@@ -1447,7 +1494,7 @@ async function endScreen(win, hazard){
 // ============================================================
 function updateMineCount(){
   const left = Math.max(0, mineTotal - flagsUsed);
-  mineCountEl.textContent = '🐍 ' + String(left).padStart(3,'0');
+  mineCountEl.textContent = '🪤 ' + String(left).padStart(3,'0');
 }
 function startTimer(){
   stopTimer();
@@ -1486,7 +1533,9 @@ function dropComets(){
   setTimeout(()=>{ cometLayer.innerHTML=''; }, 1900);
 }
 function useFury(){
-  if(fury < furyMax || over || !started) return;
+  if(over || !started) return;
+  if(tutorial){ if(!(TUT[tutStep] && TUT[tutStep].require==='special')) return; }
+  else if(fury < furyMax) return;
   furyBtn.style.display='none';
   if(soundOn){ beep(160,0.5,'sawtooth',0.2,60); [660,880,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.15),120+i*90)); }
   dropComets();
@@ -1494,11 +1543,14 @@ function useFury(){
   if(bw){ bw.classList.remove('shaking'); void bw.offsetWidth; bw.classList.add('shaking'); setTimeout(()=>bw.classList.remove('shaking'), 720); }
   furyBlast = true;
   setTimeout(()=>{
-    // cometas ELIMINAM um número aleatório de casas (entre 10 e o máx da fase), só em casas
-    // AINDA NÃO CLICADAS e SEM armadilhas (!mine, !revealed, !flagged)
+    // cometas revelam casas AINDA NÃO CLICADAS e SEM armadilhas (!mine, !revealed, !flagged)
     const safe=[];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.revealed && !g.flagged) safe.push([r,c]); }
     for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
+    if(tutorial){
+      safe.forEach(p=>revealCell(grid[p[0]][p[1]], p[0], p[1])); // no tutorial, limpa TUDO
+      furyBlast=false; fury=0; updateFuryUI(); tutAdvance(); return;
+    }
     const low = 10; // elimina entre 10 e o máximo da Fúria daquela fase
     const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório 10..furyMax
     const hits = Math.min(n, safe.length);
@@ -1506,6 +1558,71 @@ function useFury(){
     furyBlast=false; fury=0; updateFuryUI();
     checkWin(); // se todas as casas seguras foram eliminadas -> vitória; senão continua jogando
   }, 650);
+}
+
+// ============================================================
+//  TUTORIAL (onboarding) — Dona Anna ensina num tabuleiro 6×6
+// ============================================================
+const TUT_MINES = [[0,3],[2,1],[3,4],[5,2],[1,5]];
+function tutReveal(r,c){ const g=grid[r]&&grid[r][c]; if(g && !g.revealed && !g.mine) revealCell(g,r,c); }
+const TUT = [
+  { require:'next', text:'Oi, meu anjo! 👵 Sou a <b>Vovó Anna</b>. Vou te ensinar a cuidar do jardim comigo, bem devagarinho. Bora?' },
+  { require:'next', text:'O jardim tem casinhas cobertas 🟩. Algumas escondem <b>armadilhas</b> 🪤. Seu trabalho é <b>limpar todas as casas SEM armadilha</b>.' },
+  { require:'reveal:0,2', highlight:[[0,2]], text:'Pra limpar uma casa, é só <b>clicar</b> nela. Clique na casinha que está <b>piscando em verde</b> — pode confiar, é seguro! 👇' },
+  { require:'next', highlight:[[0,2]], text:'Apareceu um <b>número</b>! Cada número diz <b>quantas armadilhas 🪤 há nas casas vizinhas</b> (as 8 que encostam nela). Aqui é <b>1</b> → tem 1 armadilha bem pertinho.' },
+  { require:'next', highlight:[[0,3]], onEnter:()=>{ tutReveal(0,4); tutReveal(1,2); tutReveal(1,3); tutReveal(1,4); updateFuryUI(); }, text:'Deixa eu abrir aqui em volta pra te mostrar... 👀 Repara: essas casas têm números e a <b>única casa coberta no meio</b> delas é a que está piscando. É a <b>armadilha</b>! 🪤' },
+  { require:'flag:0,3', highlight:[[0,3],'#flagPalette'], text:'Vamos <b>MARCAR</b> pra não pisar sem querer: <b>arraste a bandeirinha 🚩</b> (do canto ➡) até a casa piscando. (No computador, também dá clique com o botão direito.)' },
+  { require:'next', text:'Isso, meu amor! 🚩 A armadilha ficou marcada. Marcou errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
+  { require:'next', highlight:['#mineCount'], text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
+  { require:'next', highlight:['#timer'], text:'O ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b> ganha!' },
+  { require:'next', highlight:['#furyWrap'], text:'E esta barra ⚡ é a <b>FÚRIA DA VOVÓ</b>, seu poder especial. Ela <b>enche com os números</b> que você vai revelando.' },
+  { require:'special', highlight:['#furyBtn'], onEnter:()=>{ fury=furyMax; updateFuryUI(); }, text:'Olha, encheu! Quando a barra <b>brilha</b>, aparece o botão. Aperte <b>USAR FÚRIA DA VOVÓ</b>! ✨' },
+  { require:'next', text:'UAU! ☄️ Os <b>cometas</b> caíram e limparam o resto do jardim de uma vez só! Poder de vó não falha. 🌸' },
+  { require:'next', text:'Ah, uma dica: se você <b>travar pensando</b>, eu uso minha experiência e <b>pisco uma casa segura em verde</b> 🌿 pra te ajudar. Pode confiar!' },
+  { require:'next', text:'Sua <b>PONTUAÇÃO</b>: cada fase começa com pontos, você perde um tiquinho com o tempo, e <b>ganha por cada armadilha achada</b>. Rápido + caprichado = topo do <b>ranking</b>! 🏆' },
+  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, meu bem! Agora você já sabe cuidar do jardim comigo. Bora de verdade? 🌷👵' },
+];
+function clearTutHl(){ document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl')); }
+function tutGo(i){
+  tutStep = i; const s = TUT[i]; if(!s) return endTutorial();
+  clearTutHl();
+  if(s.onEnter) s.onEnter();
+  document.getElementById('tutText').innerHTML = s.text;
+  (s.highlight||[]).forEach(h=>{
+    if(Array.isArray(h)){ const g=grid[h[0]]&&grid[h[0]][h[1]]; if(g) g.el.classList.add('tut-hl'); }
+    else { const el=document.querySelector(h); if(el) el.classList.add('tut-hl'); }
+  });
+  const nx = document.getElementById('tutNext');
+  nx.style.display = (s.require==='next') ? '' : 'none';
+  nx.textContent = s.nextLabel || 'PRÓXIMO ▶';
+}
+function tutAdvance(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
+function startTutorial(){
+  tutorial = true; tutStep = 0;
+  cfg = { id:'tut', name:'TUTORIAL', emoji:'🎓', rows:6, cols:6, mines:TUT_MINES.length, start:0 };
+  rows=6; cols=6; mineTotal=TUT_MINES.length;
+  grid=[]; started=true; over=false; clockOn=false; flagsUsed=0; revealedCount=0; timer=0; stopTimer();
+  blockedCount=0; blockBr=0; fury=0; furyBlast=false; furyMax=5;
+  faceEl.textContent='👵'; $('#phaseName').textContent='🎓  TUTORIAL'; timerEl.textContent='000';
+  boardEl.style.gridTemplateColumns='repeat(6,1fr)'; boardEl.innerHTML='';
+  for(let r=0;r<6;r++){ grid[r]=[]; for(let c=0;c<6;c++){
+    const el=document.createElement('div'); el.className='cell'; el.dataset.r=r; el.dataset.c=c;
+    el.addEventListener('click', ()=>onReveal(r,c));
+    el.addEventListener('contextmenu', e=>{e.preventDefault(); onFlag(r,c);});
+    boardEl.appendChild(el);
+    grid[r][c]={mine:false,hazard:null,revealed:false,flagged:false,adj:0,blocked:false,el};
+  }}
+  TUT_MINES.forEach(([r,c])=>{ grid[r][c].mine=true; grid[r][c].hazard=pickHazard(); });
+  computeAdj(); updateMineCount(); updateFuryUI();
+  hideAnna(); fitBoard();
+  menuEl.style.display='none'; gameEl.style.display='flex'; overlayEl.style.display='none'; flagPalette.style.display='flex';
+  document.getElementById('tutBanner').style.display='flex';
+  tutGo(0);
+}
+function endTutorial(){
+  tutorial=false; clearTutHl(); furyBlast=false;
+  document.getElementById('tutBanner').style.display='none';
+  goMenu();
 }
 
 function bestKey(){ return 'donaAnna_best_'+cfg.id; }
@@ -1554,6 +1671,9 @@ function openRules(){ rulesEl.style.display='flex'; const pnl=rulesEl.querySelec
 function closeRules(){ rulesEl.style.display='none'; LS.set('donaAnna_rules_seen','1'); }
 $('#rulesOk').onclick  = ()=>{ S.click(); closeRules(); };
 $('#rulesBtn').onclick = ()=>{ S.click(); openRules(); };
+$('#tutBtn').onclick   = ()=>{ S.click(); startTutorial(); };
+$('#tutNext').onclick  = ()=>{ S.click(); tutAdvance(); };
+$('#tutSkip').onclick  = ()=>{ S.click(); endTutorial(); };
 
 // ============================================================
 //  ARRASTAR A BANDEIRINHA até a cilada (funciona no celular via pointer events)
