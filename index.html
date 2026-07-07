@@ -214,17 +214,12 @@
   /* ===================== TUTORIAL ===================== */
   #tutBanner{display:none;position:fixed;left:50%;top:10px;bottom:auto;transform:translateX(-50%);
     width:min(680px,94vw);z-index:9992;align-items:center;gap:12px;
-    background:linear-gradient(180deg,#6a4a28,#3a2712);border:3px solid #1a1105;border-top-color:#ffd98a;
+    background:linear-gradient(180deg,#ffe08a,#f3bd48);border:3px solid #6b4310;border-top-color:#fff2c0;
     border-radius:12px;padding:13px 15px;
-    box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,201,110,.55),0 0 26px 6px rgba(255,180,74,.45);
-    transition:opacity .35s ease;animation:tutGlow 2.4s ease-in-out infinite;}
-  @keyframes tutGlow{
-    0%,100%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,201,110,.5),0 0 22px 5px rgba(255,180,74,.38);}
-    50%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,224,150,.85),0 0 40px 12px rgba(255,190,90,.7);}
-  }
-  .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));animation:annaIdle 1.9s ease-in-out infinite;}
-  .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#f0e2c4;text-align:left;}
-  .tut-text b{color:var(--amber);}
+    box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(60,38,8,.5);}
+  .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));animation:annaIdle 1.9s ease-in-out infinite;}
+  .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#3a2510;text-align:left;}
+  .tut-text b{color:#9c3410;}
   .tut-btns{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;}
   #tutBanner .btn{padding:8px 14px;font-size:13px;}
   /* destaque piscante (casa ou elemento do painel) */
@@ -434,19 +429,12 @@
   /* ---- bandeirinha arrastável ---- */
   #flagPalette{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:620;
     display:none;flex-direction:column;align-items:center;gap:4px;touch-action:none;
-    background:linear-gradient(180deg,#6a3320,#3a1a10);border:2px solid #1a0d07;border-top-color:#ff8a5c;border-radius:12px;
-    padding:10px 8px;box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,110,70,.4);
-    animation:flagPulse 1.8s ease-in-out infinite;}
-  @keyframes flagPulse{
-    0%,100%{box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,110,70,.4),0 0 16px 3px rgba(255,80,60,.35);}
-    50%{box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,150,100,.75),0 0 30px 9px rgba(255,90,60,.65);}
-  }
+    background:linear-gradient(180deg,#ffffff,#f2ebda);border:2px solid #1a0d07;border-radius:12px;
+    padding:10px 8px;box-shadow:0 8px 22px rgba(0,0,0,.65),0 0 0 3px rgba(255,255,255,.3);}
   #flagSrc{font-size:40px;cursor:grab;touch-action:none;
-    filter:drop-shadow(0 0 7px rgba(255,90,60,.9)) drop-shadow(0 2px 2px rgba(0,0,0,.5));
-    animation:flagWave 1.6s ease-in-out infinite;}
+    filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));}
   #flagSrc:active{cursor:grabbing;}
-  #flagPalette .flag-hint{font-family:Georgia,serif;font-size:10px;color:#ffd9b0;text-align:center;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.6);}
-  @keyframes flagWave{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
+  #flagPalette .flag-hint{font-family:Georgia,serif;font-size:10px;font-weight:bold;color:#8a3411;text-align:center;line-height:1.2;}
   #dragFlag{position:fixed;left:0;top:0;font-size:36px;pointer-events:none;z-index:10005;display:none;
     transform:translate(-100px,-100px);filter:drop-shadow(0 3px 4px rgba(0,0,0,.7));}
 
