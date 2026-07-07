@@ -375,8 +375,10 @@
     animation:fadeIn .3s ease;
   }
   #rankOverlay .panel{max-width:520px;}
-  .rank-head,.rank-row{display:grid;grid-template-columns:30px 1fr 72px 1.05fr 56px;gap:6px;align-items:center;
+  .rank-head,.rank-row{display:grid;grid-template-columns:28px 1fr 58px .9fr 52px 50px;gap:6px;align-items:center;
     font-family:Georgia,serif;font-weight:normal;font-size:12px;padding:5px 8px;text-align:left;}
+  .rank-row .nm,.rank-head .nm,.rank-row .dv,.rank-head .dv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-row .tm,.rank-head .tm{font-size:11px;color:#5ad1ff;font-weight:bold;text-align:right;}
   .rank-head{color:#8a7550;border-bottom:1px solid #4a2f16;letter-spacing:1px;text-transform:uppercase;font-size:10px;}
   .ranklist{max-height:210px;overflow-y:auto;margin-top:2px;}
   .rank-sec-title{color:var(--amber);font-size:12px;letter-spacing:1px;margin:12px 0 3px;text-align:left;text-shadow:0 1px 0 #000;}
@@ -626,10 +628,10 @@
     <div class="panel">
       <h2 class="win" id="rankTitle" style="font-size:26px;">🏆 RANKING</h2>
       <div class="rank-sec-title">🏆 TOP 20 · TODOS OS TEMPOS</div>
-      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span><span class="tm">Tempo</span></div>
       <div id="rankListAll" class="ranklist"></div>
       <div class="rank-sec-title">☀️ HOJE · TODOS OS JOGADORES</div>
-      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span></div>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span><span class="tm">Tempo</span></div>
       <div id="rankListToday" class="ranklist"></div>
       <div class="panel-actions" style="margin-top:14px;">
         <button class="btn" id="rankClose">VOLTAR</button>
@@ -1256,7 +1258,7 @@ function dedupeByName(list){
 function rankRowsHTML(list){
   return list.map((e,i)=>
     `<div class="rank-row"><span class="pos">${i+1}º</span><span class="nm">${escapeHtml(e.name)}</span>`+
-    `<span class="dt">${fmtDate(e.when||e.created_at)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span></div>`
+    `<span class="dt">${fmtDate(e.when||e.created_at)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span><span class="tm">${fmtTime(e.time||0)}</span></div>`
   ).join('');
 }
 function miniRows(list){
