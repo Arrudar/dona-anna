@@ -480,6 +480,9 @@
     75%{transform:translateY(-2px) rotate(-2deg);}
   }
   @keyframes annaWalk{0%,100%{transform:translateY(0) rotate(-5deg);}50%{transform:translateY(-6px) rotate(5deg);}}
+  /* vitória: a vovó saltita de alegria pelo jardim todo */
+  #anna.celebrate .body{animation:annaHop .5s ease-in-out infinite;}
+  @keyframes annaHop{0%,100%{transform:translateY(0) rotate(-6deg) scale(1);}30%{transform:translateY(-14px) rotate(5deg) scale(1.08);}60%{transform:translateY(-1px) rotate(6deg) scale(1.02);}}
   #annaShadow{
     position:fixed;left:0;top:0;width:34px;height:12px;margin:-6px 0 0 6px;
     background:radial-gradient(ellipse,rgba(0,0,0,.45),transparent 70%);
@@ -797,6 +800,10 @@ const RELIEF = ['Ufa!', 'Essa passou perto...', 'Ainda inteira!', 'Fé em Deus.'
 const DISARM = ['Acham que vão me enganar?', 'Essa cilada eu já conheço.', 'Tô de olho, viu?', 'Cai fora, perigo!', 'Nasci de noite, mas não ontem.'];
 const TICKS  = ['Tá cheio de carrapato aqui!', 'Vou criar teia esperando você...', 'Anda logo, ô!', 'Minhas pernas não são de ferro!', 'Cadê meus óculos, cadê?'];
 const BUILD_TALK = ['Ai, ai... vou fazer um café pra te esperar pensar ☕', 'Enquanto você decide, vou regar as plantinhas 🌱', 'Tá pensando ou cochilando, meu bem?', 'Vou dar uma sentadinha aqui na varanda...', 'Cadê a agilidade, criança? 🐌', 'Acho que vou fazer uma caipirinha enquanto te espero. Quer? 🍸'];
+// Passa perto de uma armadilha escondida enquanto passeia pelo jardim já limpo
+const TRAP_QUIPS = ['Eita! Se não fosse você, era mais duas semanas no xarope! 😅', 'Ui, quase! Sua vó no hospital de novo não, viu? 🙈', 'Cruzes, que perigo! Ainda bem que te tenho, meu bem 🍀', 'Xiii... por um triz! Já tava sentindo cheirinho de arnica 😬', 'Nossa Senhora! Essa cilada quase pega essa velha 😰', 'Fiu! De boa contigo por perto, criança 🌿', 'Óia o susto! Meu coração de vó não aguenta, viu? 💓', 'Quase escorreguei igual da última vez... adeus quadril! 🦴'];
+// Vitória: passeando feliz pelo jardim todo limpo
+const JOY_QUIPS = ['Ai, como eu amo esse jardim! 🌸', 'Isso aqui me energiza, viu, meu bem! ✨', 'Passear no meu jardim é vida! 🌻', 'Melhor que isso, só os bisnetos por perto 💛', 'Tô me sentindo mocinha de novo! 🦋', 'Cada florzinha dessas é uma alegria 🌷', 'Respira esse arzinho... que delícia! 🍃', 'Meu jardim lindo de novo, graças a você! 🌼', 'Dá até vontade de dançar aqui no meio das flores 💃', 'Que paz, que cheirinho bom... isso é que é viver! 😌'];
 
 // Cenas de consequência quando ela cai numa armadilha
 const LOSE_SCENES = [
@@ -958,7 +965,8 @@ function playHazardSound(hz){
 // ============================================================
 const annaEl = $('#anna'), annaShadow = $('#annaShadow'), annaBubble = $('#annaBubble');
 let annaX = null, annaY = null, annaBaseX = null, annaBaseY = null, annaCell = null;
-let walkTO = null, bubbleTO = null, idleTO = null;
+let walkTO = null, bubbleTO = null, idleTO = null, strollTO = null, joyTO = null;
+let celebrating = false; // vitória: a vovó saltita feliz pelo jardim todo
 
 function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
 
@@ -982,13 +990,52 @@ function moveAnnaToCell(el){
 }
 // parada: perambula devagar em volta da casa (dinamismo)
 function annaWander(){
-  if(!started || over || annaBaseX==null) return;
+  if(!started || (over && !celebrating) || annaBaseX==null) return;
   if(annaEl.classList.contains('walking')) return;
   const dx = (Math.random()*2-1)*13, dy = (Math.random()*2-1)*7 - 2;
   annaX = annaBaseX + dx; annaY = annaBaseY + dy;
   annaPlace(annaX, annaY, 0.6);
 }
 setInterval(annaWander, 1500);
+
+// PASSEIO: entre uma jogada e outra, a vovó caminha pelo jardim JÁ LIMPO (só casas
+// seguras reveladas). Se parar coladinha numa armadilha ainda escondida, solta um
+// comentário engraçado de alívio. Na vitória (celebrating) ela passeia pelo mapa TODO.
+function strollDelay(){ return celebrating ? (1500 + Math.floor(Math.random()*1600)) : (2800 + Math.floor(Math.random()*2600)); }
+function resetStroll(){ clearTimeout(strollTO); if((over && !celebrating) || !started) return; strollTO = setTimeout(annaStroll, strollDelay()); }
+function annaStroll(){
+  if((over && !celebrating) || !started) return;
+  const pool=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const g=grid[r][c];
+    if(g.blocked) continue;
+    if(celebrating) pool.push([r,c]);                 // vitória: jardim todo é passeável
+    else if(g.revealed && !g.mine) pool.push([r,c]);  // jogando: só o que já foi limpo
+  }
+  if(pool.length){
+    const [r,c] = pool[Math.floor(Math.random()*pool.length)];
+    moveAnnaToCell(grid[r][c].el);
+    if(!celebrating){ // perto de armadilha escondida? comenta de vez em quando
+      let nearTrap=false;
+      forEachNeighbor(r,c,(nr,nc)=>{ const g=grid[nr][nc]; if(g.mine && !g.revealed) nearTrap=true; });
+      if(nearTrap && Math.random()<0.35) sayAnna(pick(TRAP_QUIPS), 2800);
+    }
+  }
+  strollTO = setTimeout(annaStroll, strollDelay());
+}
+// vitória: a vovó fica feliz e passeia saltitando pelo jardim todo, soltando balõezinhos alegres
+function startCelebration(){
+  celebrating = true;
+  setAnnaFace('👵');
+  annaEl.classList.add('celebrate');
+  resetStroll();
+  clearTimeout(joyTO); joyTO = setTimeout(celebrateSay, 1600);
+}
+function celebrateSay(){
+  if(!celebrating) return;
+  sayAnna(pick(JOY_QUIPS), 3200);
+  joyTO = setTimeout(celebrateSay, 4200 + Math.floor(Math.random()*3200));
+}
 function sayAnna(text, dur=1700, green){
   if(!text) return;
   annaBubble.textContent = text;
@@ -999,9 +1046,10 @@ function sayAnna(text, dur=1700, green){
 }
 function setAnnaFace(f){ annaEl.querySelector('.body').textContent = f; }
 function hideAnna(){
-  clearTimeout(idleTO); clearTimeout(walkTO); clearTimeout(bubbleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell();
+  clearTimeout(idleTO); clearTimeout(walkTO); clearTimeout(bubbleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearTimeout(strollTO); clearTimeout(joyTO); clearHintCell();
+  celebrating = false;
   annaBubble.classList.remove('show');
-  annaEl.classList.remove('walking');
+  annaEl.classList.remove('walking','celebrate');
   annaX = annaY = annaBaseX = annaBaseY = null; annaCell = null;
   annaEl.style.transitionDuration = annaShadow.style.transitionDuration = annaBubble.style.transitionDuration = '0s';
   annaEl.style.transform = annaShadow.style.transform = 'translate(-120px,-120px)';
@@ -1473,6 +1521,7 @@ function onReveal(r,c){
   furyFirstMove = false; // a partir daqui cada número volta a valer 1/2 da Aura
   S.reveal();
   resetIdle();
+  resetStroll();      // reinicia o passeio pelo jardim já limpo
   resetHelp();        // reinicia o timer da dica de área segura
   resetBuildVisit();  // reinicia o timer da visita à construção
   if(Math.random()<0.28) sayAnna(pick(RELIEF));
@@ -1537,6 +1586,7 @@ function onFlag(r,c){
   }
   updateMineCount();
   resetIdle();
+  resetStroll();
 }
 
 // ============================================================
@@ -1563,7 +1613,7 @@ function attachTip(el, html){
 function loseGame(hitCell){
   over = true;
   stopTimer();
-  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
+  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearTimeout(strollTO); clearTimeout(joyTO); clearHintCell(); updateFuryUI();
   faceEl.textContent = '😵';
   setAnnaFace('😵'); annaBubble.classList.remove('show');
   playHazardSound(hitCell.hazard); // SOM ESPECÍFICO do perigo pisado
@@ -1595,7 +1645,7 @@ const TIME_HAZARD = { emoji:'⏰', name:'O relógio', why:'Passeio de vovó tamb
 function loseByTime(){
   if(over) return;
   over = true; stopTimer();
-  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
+  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearTimeout(strollTO); clearTimeout(joyTO); clearHintCell(); updateFuryUI();
   faceEl.textContent = '😵'; setAnnaFace('😵'); annaBubble.classList.remove('show');
   S.boom();
   document.body.classList.add('screen-shake');
@@ -1620,9 +1670,8 @@ function checkWin(){
   if(revealedCount >= safe){
     over = true;
     stopTimer();
-    clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
-    faceEl.textContent = '😎';
-    setAnnaFace('😎');
+    clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearTimeout(strollTO); clearTimeout(joyTO); clearHintCell(); updateFuryUI();
+    faceEl.textContent = '😎'; // carinha do placar (indicador de vitória)
     S.win();
     // jardim limpo: os perigos viram FLORES (jardim lindo e florido)
     const WFLOWERS=['🌷','🌸','🌻','🌼','🌹','💐','🏵️','🌺'];
@@ -1634,6 +1683,7 @@ function checkWin(){
         attachTip(cell.el, buildFlowerTip(emoji)); // balãozinho fofo da Vovó ao passar o mouse
       }
     }
+    startCelebration(); // a vovó fica feliz e sai saltitando pelo jardim florido (mapa todo)
     saveBest(timer);
     setTimeout(()=>endScreen(true, null), 2000); // deixa ~2s p/ o jogador admirar o jardim florido
 
