@@ -200,10 +200,15 @@
   /* ===================== TUTORIAL ===================== */
   #tutBanner{display:none;position:fixed;left:50%;top:10px;bottom:auto;transform:translateX(-50%);
     width:min(680px,94vw);z-index:9992;align-items:center;gap:12px;
-    background:linear-gradient(180deg,rgba(42,28,16,.96),rgba(20,13,7,.96));border:3px solid #000;border-top-color:#ffb84a;
-    border-radius:12px;padding:13px 15px;box-shadow:0 16px 44px rgba(0,0,0,.75),0 0 0 2px rgba(255,184,74,.25);
-    transition:opacity .35s ease;}
-  #tutBanner.acting{opacity:.45;} /* fica translúcido na hora de você agir (o tabuleiro aparece bem) */
+    background:linear-gradient(180deg,#6a4a28,#3a2712);border:3px solid #1a1105;border-top-color:#ffd98a;
+    border-radius:12px;padding:13px 15px;
+    box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,201,110,.55),0 0 26px 6px rgba(255,180,74,.45);
+    transition:opacity .35s ease;animation:tutGlow 2.4s ease-in-out infinite;}
+  @keyframes tutGlow{
+    0%,100%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,201,110,.5),0 0 22px 5px rgba(255,180,74,.38);}
+    50%{box-shadow:0 16px 44px rgba(0,0,0,.7),0 0 0 2px rgba(255,224,150,.85),0 0 40px 12px rgba(255,190,90,.7);}
+  }
+  #tutBanner.acting{opacity:.5;animation:none;box-shadow:0 12px 30px rgba(0,0,0,.6),0 0 0 2px rgba(255,201,110,.4);} /* recua na hora de você agir (o tabuleiro aparece bem) */
   #tutBanner.acting:hover{opacity:1;}
   .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));animation:annaIdle 1.9s ease-in-out infinite;}
   .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#f0e2c4;text-align:left;}
@@ -417,12 +422,18 @@
   /* ---- bandeirinha arrastável ---- */
   #flagPalette{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:620;
     display:none;flex-direction:column;align-items:center;gap:4px;touch-action:none;
-    background:linear-gradient(180deg,#2c1d11,#171009);border:2px solid #000;border-radius:12px;
-    padding:10px 8px;box-shadow:0 8px 18px rgba(0,0,0,.6);}
-  #flagSrc{font-size:36px;cursor:grab;touch-action:none;filter:drop-shadow(0 2px 2px rgba(0,0,0,.5));
+    background:linear-gradient(180deg,#6a3320,#3a1a10);border:2px solid #1a0d07;border-top-color:#ff8a5c;border-radius:12px;
+    padding:10px 8px;box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,110,70,.4);
+    animation:flagPulse 1.8s ease-in-out infinite;}
+  @keyframes flagPulse{
+    0%,100%{box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,110,70,.4),0 0 16px 3px rgba(255,80,60,.35);}
+    50%{box-shadow:0 8px 18px rgba(0,0,0,.55),0 0 0 2px rgba(255,150,100,.75),0 0 30px 9px rgba(255,90,60,.65);}
+  }
+  #flagSrc{font-size:40px;cursor:grab;touch-action:none;
+    filter:drop-shadow(0 0 7px rgba(255,90,60,.9)) drop-shadow(0 2px 2px rgba(0,0,0,.5));
     animation:flagWave 1.6s ease-in-out infinite;}
   #flagSrc:active{cursor:grabbing;}
-  #flagPalette .flag-hint{font-family:Georgia,serif;font-size:10px;color:#a3906c;text-align:center;line-height:1.2;}
+  #flagPalette .flag-hint{font-family:Georgia,serif;font-size:10px;color:#ffd9b0;text-align:center;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.6);}
   @keyframes flagWave{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(6deg);}}
   #dragFlag{position:fixed;left:0;top:0;font-size:36px;pointer-events:none;z-index:10005;display:none;
     transform:translate(-100px,-100px);filter:drop-shadow(0 3px 4px rgba(0,0,0,.7));}
@@ -664,6 +675,7 @@
     <div class="tut-text" id="tutText"></div>
     <div class="tut-btns">
       <button class="btn" id="tutNext">PRÓXIMO ▶</button>
+      <button class="btn ghost sm" id="tutBack" style="display:none;">◀ VOLTAR</button>
       <button class="btn ghost sm" id="tutSkip">PULAR</button>
     </div>
   </div>
@@ -1588,9 +1600,10 @@ function useFury(){
 // ============================================================
 const TUT_MINES = [[0,5],[1,4],[3,2],[4,4],[5,0]]; // tabuleiro pedagógico (dedução limpa)
 let tutPeeked = [];
+let tutMaxStep = 0; // passo mais avançado já alcançado (fronteira) — habilita VOLTAR/AVANÇAR
 const pn = ()=> playerName || 'meu bem';
 function tutHlCell(r,c,cls){ const g=grid[r]&&grid[r][c]; if(g) g.el.classList.add(cls); }
-function tutPeek(cells){ cells.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(!g) return; g.el.classList.add('tut-peek'); if(!g.revealed && g.mine && g.hazard){ g.el.textContent=g.hazard.emoji; tutPeeked.push([r,c]); } }); }
+function tutPeek(cells){ cells.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(!g) return; g.el.classList.add('tut-peek'); if(!g.revealed && !g.flagged && g.mine && g.hazard){ g.el.textContent=g.hazard.emoji; tutPeeked.push([r,c]); } }); }
 function tutShowFury(full){ document.getElementById('furyWrap').style.display=''; fury = full?furyMax:0; updateFuryUI(); }
 const TUT = [
   { require:'next', text:'Oi! 👵 Sou a <b>Vovó Anna</b>. Este jardim tá tomado de <b>mato</b> — as casinhas verdes 🟩 — e eu preciso da sua ajuda pra <b>limpar tudo</b>. Bora, {NAME}?' },
@@ -1616,7 +1629,7 @@ const TUT = [
 ];
 function clearTutHl(){
   document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
-  tutPeeked.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(g && !g.revealed) g.el.textContent=''; });
+  tutPeeked.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(g && !g.revealed && !g.flagged) g.el.textContent=''; });
   tutPeeked = [];
 }
 function tutGo(i){
@@ -1628,14 +1641,21 @@ function tutGo(i){
     if(Array.isArray(h)){ tutHlCell(h[0],h[1],'tut-hl'); }
     else { const el=document.querySelector(h); if(el) el.classList.add('tut-hl'); }
   });
+  const revisiting = i < tutMaxStep; // já passou por aqui: a ação já foi feita
   const nx = document.getElementById('tutNext');
-  nx.style.display = (s.require==='next') ? '' : 'none';
-  nx.textContent = s.nextLabel || 'PRÓXIMO ▶';
-  document.getElementById('tutBanner').classList.toggle('acting', s.require!=='next'); // translúcido na hora de agir
+  const bk = document.getElementById('tutBack');
+  const showFwd = (s.require==='next') || revisiting;
+  nx.style.display = showFwd ? '' : 'none';
+  nx.textContent = (s.require==='next') ? (s.nextLabel || 'PRÓXIMO ▶') : 'AVANÇAR ▶';
+  bk.style.display = (i>0) ? '' : 'none';
+  // recua/translúcido só quando exige uma AÇÃO na fronteira (não quando você está relendo)
+  document.getElementById('tutBanner').classList.toggle('acting', s.require!=='next' && !revisiting);
 }
-function tutAdvance(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
+function tutBackStep(){ if(tutStep>0) tutGo(tutStep-1); }
+function tutForward(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
+function tutAdvance(){ tutMaxStep = Math.max(tutMaxStep, tutStep+1); tutForward(); }
 function startTutorial(){
-  tutorial = true; tutStep = 0;
+  tutorial = true; tutStep = 0; tutMaxStep = 0;
   cfg = { id:'tut', name:'TUTORIAL', emoji:'🎓', rows:6, cols:6, mines:TUT_MINES.length, start:0 };
   rows=6; cols=6; mineTotal=TUT_MINES.length;
   grid=[]; started=true; over=false; clockOn=false; flagsUsed=0; revealedCount=0; timer=0; stopTimer();
@@ -1718,6 +1738,7 @@ $('#rulesOk').onclick  = ()=>{ S.click(); closeRules(); };
 $('#rulesBtn').onclick = ()=>{ S.click(); openRules(); };
 $('#tutBtn').onclick   = ()=>{ S.click(); startTutorial(); };
 $('#tutNext').onclick  = ()=>{ S.click(); tutAdvance(); };
+$('#tutBack').onclick  = ()=>{ S.click(); tutBackStep(); };
 $('#tutSkip').onclick  = ()=>{ S.click(); endTutorial(); };
 
 // ============================================================
