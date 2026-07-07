@@ -380,6 +380,15 @@
   }
   #annaBubble::after{content:'';position:absolute;bottom:-8px;left:14px;border:7px solid transparent;border-top-color:#1a1008;}
   #annaBubble.show{opacity:1;}
+  #annaBubble.green{color:#12812c;border-color:#12812c;}
+  #annaBubble.green::after{border-top-color:#12812c;}
+
+  /* dica de ajuda: casinha segura piscando em verde luminoso */
+  .cell.hint-safe{ z-index:4;
+    box-shadow:inset 2px 2px 0 rgba(205,255,175,.5), inset -2px -2px 0 rgba(0,0,0,.35),
+      0 0 0 3px #4dff5a, 0 0 16px 4px rgba(70,255,100,.85);
+    animation:safeBlink .7s ease-in-out infinite; }
+  @keyframes safeBlink{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.7) saturate(1.3);} }
 
   /* ===================== ANIMAÇÕES ===================== */
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
@@ -411,12 +420,12 @@
     <!-- ===================== MENU ===================== -->
     <div id="menu">
       <div class="story">
-        Dona <b>Anna</b>, <b>96 primaveras recém-completadas</b>, só quer uma coisa: <b>passear pelo jardim da fazenda
-        que tanto ama</b>. Mas tem um problema — sem os óculos ela não enxerga um palmo, e o jardim virou um campo
-        minado de perigos: uma <b>cobra</b> entre as roseiras, aquela <b>escada escorregadia</b>, o <b>fisioterapeuta</b>
-        que ela evita a todo custo, e a pior de todas — a <b>vizinha chata</b> pronta pra um papo de 3 horas. Revele o
-        caminho com cuidado, marque as ciladas e ache os óculos pra enfim curtir o passeio.
-        <br><br><i>(Spoiler: os óculos quase sempre estão na cabeça. Mas isso é problema seu.)</i>
+        Dona <b>Anna</b>, <b>96 primaveras recém-completadas</b>, só quer uma coisa: <b>deixar o jardim da fazenda
+        que tanto ama bem limpinho</b>. Mas tem um problema — ela <b>perdeu os óculos</b> e não enxerga um palmo, e o
+        jardim virou um campo minado de perigos: uma <b>cobra</b> entre as roseiras, aquela <b>escada escorregadia</b>,
+        o <b>fisioterapeuta</b> que ela evita a todo custo, e a pior de todas — a <b>vizinha chata</b> pronta pra um
+        papo de 3 horas. <b>Ajude a vovó a limpar todas as casinhas seguras</b> do jardim, desviando das ciladas.
+        <br><br><i>(Spoiler: os óculos estão na cabeça dela o tempo todo. Mas não conta pra ela.)</i>
       </div>
 
       <div class="menu-fields">
@@ -518,7 +527,7 @@
     <div class="panel">
       <h2 class="win" style="font-size:24px;">📖 COMO JOGAR</h2>
       <div class="rules-list">
-        <div class="rules-item"><div class="rt">🎯 OBJETIVO</div><div class="rd">Dona Anna quer passear pelo jardim inteiro. Use a <b>pá</b> (seu cursor / toque) pra <b>revelar todas as casas seguras</b>, sem pisar nas <b>armadilhas</b> escondidas (🐍 cobra, 🪜 escada, 🧑‍⚕️ fisioterapeuta...). Limpou tudo = achou os óculos e venceu! 👓</div></div>
+        <div class="rules-item"><div class="rt">🎯 OBJETIVO</div><div class="rd">Ajude a Dona Anna a <b>limpar o jardim inteiro</b>! Use a <b>pá</b> (seu cursor / toque) pra <b>limpar todas as casinhas seguras</b>, sem pisar nas <b>armadilhas</b> escondidas (🐍 cobra, 🪜 escada, 🧑‍⚕️ fisioterapeuta...). Limpou tudo = jardim pronto e a vovó faz um lanchinho pra você! 🌻 <i>(Ela perdeu os óculos, mas isso é outro problema 👓)</i></div></div>
         <div class="rules-item"><div class="rt">🔢 OS NÚMEROS</div><div class="rd">Ao abrir uma casa pode surgir um <b>número</b>: ele diz <b>quantas armadilhas há nas casas vizinhas</b> (as 8 em volta). Casa <b>vazia</b> = nenhuma armadilha por perto (e ela abre a vizinhança sozinha). Use os números pra <b>deduzir</b> onde estão as ciladas.</div></div>
         <div class="rules-item"><div class="rt">🚩 MARCAR UMA ARMADILHA</div><div class="rd">Desconfiou de uma casa? <b>Arraste a bandeirinha vermelha</b> (no canto ➡) até ela — funciona no celular. No computador, o <b>clique direito</b> também marca.</div></div>
         <div class="rules-item"><div class="rt">↩️ TIRAR UMA BANDEIRA</div><div class="rd">Marcou no lugar errado? É só <b>tocar (clicar) na casa da bandeira</b> que ela sai. Simples assim.</div></div>
@@ -584,9 +593,8 @@ const LOSE_SCENES = [
 ];
 
 const WIN_QUIPS = [
-  'Achou os óculos! Estavam na cabeça o tempo todo. Óbvio.',
-  'Vitória! Os óculos estavam na geladeira. Ninguém questiona a Dona Anna.',
-  'Encontrou! Agora só falta lembrar por que foi até a cozinha.',
+  'Obrigada por limpar o jardim comigo, meu anjo! 🌷 (Os óculos? Estavam na minha cabeça o tempo todo, óbvio.) De prêmio, vou fazer um lanchinho pra você. Prefere uma abobrinha batatinha ou uma lasanha com plástico? Hihihi 😋',
+  'Que capricho, ficou lindo! 🌻 Obrigada, viu? Achei até os óculos — na cabeça, claro. Você merece um lanche: abobrinha batatinha ou lasanha com plástico? Hihihi 😋',
 ];
 
 // ---------- ESTADO ----------
@@ -764,16 +772,17 @@ function annaWander(){
   annaPlace(annaX, annaY, 0.6);
 }
 setInterval(annaWander, 1500);
-function sayAnna(text, dur=1700){
+function sayAnna(text, dur=1700, green){
   if(!text) return;
   annaBubble.textContent = text;
+  annaBubble.classList.toggle('green', !!green);
   annaBubble.classList.add('show');
   clearTimeout(bubbleTO);
   bubbleTO = setTimeout(()=>annaBubble.classList.remove('show'), dur);
 }
 function setAnnaFace(f){ annaEl.querySelector('.body').textContent = f; }
 function hideAnna(){
-  clearTimeout(idleTO); clearTimeout(walkTO); clearTimeout(bubbleTO);
+  clearTimeout(idleTO); clearTimeout(walkTO); clearTimeout(bubbleTO); clearTimeout(helpTO); clearHintCell();
   annaBubble.classList.remove('show');
   annaEl.classList.remove('walking');
   annaX = annaY = annaBaseX = annaBaseY = null; annaCell = null;
@@ -792,6 +801,28 @@ function idleComplain(){
   if(over || !started) return;
   sayAnna(pick(TICKS), 2600);
   idleTO = setTimeout(idleComplain, 8500);
+}
+// AJUDA: após 60s sem LIMPAR uma casinha, aponta uma casa segura da borda (pisca verde)
+let helpTO = null;
+function clearHintCell(){ document.querySelectorAll('.cell.hint-safe').forEach(e=>e.classList.remove('hint-safe')); }
+function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, 60000); }
+function showSafeHint(){
+  if(over || !started) return;
+  const borda=[], qualquer=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const g = grid[r][c];
+    if(g.mine || g.revealed || g.flagged) continue;
+    qualquer.push(g);
+    if(r===0 || r===rows-1 || c===0 || c===cols-1) borda.push(g);
+  }
+  const pool = borda.length ? borda : qualquer;
+  if(!pool.length) return;
+  const t = pool[Math.floor(Math.random()*pool.length)];
+  clearHintCell();
+  t.el.classList.add('hint-safe');
+  moveAnnaToCell(t.el);
+  sayAnna('Psiu... acho que por aqui é seguro limpar! 🌿', 5000, true); // balão VERDE
+  helpTO = setTimeout(showSafeHint, 30000); // reprograma se continuar parada
 }
 // reposiciona a vovó se a janela mudar de tamanho
 window.addEventListener('resize', ()=>{
@@ -909,20 +940,18 @@ async function sbInsert(e){
     return r.ok;
   }catch(err){ return false; }
 }
-async function sbTop(limit){
+async function sbAll(limit){
   try{
     const r = await fetch(SB_URL+`/scores?select=name,score,time,diff,created_at&order=score.desc,created_at.asc&limit=${limit}`, { headers:SB_H });
     if(!r.ok) return null;
     return await r.json();
   }catch(err){ return null; }
 }
-async function sbPosition(score){
-  try{
-    const r = await fetch(SB_URL+`/scores?select=id&score=gt.${score}`, { headers:{...SB_H,'Prefer':'count=exact','Range':'0-0'} });
-    const cr = r.headers.get('content-range');   // ex: "0-0/42" ou "*/0"
-    const total = cr ? parseInt(cr.split('/')[1],10) : NaN;
-    return isNaN(total) ? null : total+1;
-  }catch(err){ return null; }
+// lista já vem ordenada por score desc -> a 1ª ocorrência de cada nome é a maior
+function dedupeByName(list){
+  const seen = new Set(), out = [];
+  for(const e of list){ if(seen.has(e.name)) continue; seen.add(e.name); out.push(e); }
+  return out;
 }
 // normaliza entradas (local usa .when em ms; remoto usa .created_at ISO)
 function rankRowsHTML(list){
@@ -934,8 +963,11 @@ function rankRowsHTML(list){
 async function renderRank(){
   const el = $('#rankList');
   el.innerHTML = '<div class="rank-empty">Carregando ranking compartilhado… 🌐</div>';
-  let list = await sbTop(100), note = '';
-  if(list===null){ list = loadRank(); note = ' (local — sem conexão)'; }
+  const all = await sbAll(1000);
+  let list, note = '';
+  if(all===null){ list = dedupeByName(loadRank()); note = ' (local — sem conexão)'; }
+  else { list = dedupeByName(all); }
+  list = list.slice(0,20); // TOP 20, um resultado por nome (o maior)
   $('#rankTitle').textContent = '🏆 RANKING' + note;
   if(!list.length){ el.innerHTML='<div class="rank-empty">Ninguém no ranking ainda. Seja a primeira, vovó! 🌷</div>'; return; }
   el.innerHTML = rankRowsHTML(list);
@@ -1079,6 +1111,7 @@ function onReveal(r,c){
   floodReveal(r,c);
   S.reveal();
   resetIdle();
+  resetHelp();   // limpou uma casinha -> reinicia o timer de ajuda (60s)
   if(Math.random()<0.28) sayAnna(pick(RELIEF));
   checkWin();
 }
@@ -1142,7 +1175,7 @@ function onFlag(r,c){
 function loseGame(hitCell){
   over = true;
   stopTimer();
-  clearTimeout(idleTO);
+  clearTimeout(idleTO); clearTimeout(helpTO); clearHintCell();
   faceEl.textContent = '😵';
   setAnnaFace('😵'); annaBubble.classList.remove('show');
   playHazardSound(hitCell.hazard); // SOM ESPECÍFICO do perigo pisado
@@ -1170,7 +1203,7 @@ function checkWin(){
   if(revealedCount >= safe){
     over = true;
     stopTimer();
-    clearTimeout(idleTO);
+    clearTimeout(idleTO); clearTimeout(helpTO); clearHintCell();
     faceEl.textContent = '😎';
     setAnnaFace('😎');
     S.win();
@@ -1186,9 +1219,9 @@ function checkWin(){
 
 async function endScreen(win, hazard){
   flagPalette.style.display = 'none';
-  $('#endEmoji').textContent = win ? '👓' : hazard.emoji;
+  $('#endEmoji').textContent = win ? '🌻' : hazard.emoji;
   const t = $('#endTitle');
-  t.textContent = win ? 'ACHOU!' : 'GAME OVER';
+  t.textContent = win ? 'JARDIM LIMPO!' : 'GAME OVER';
   t.className = win ? 'win' : 'lose';
 
   const scene = $('#endScene');
@@ -1213,13 +1246,16 @@ async function endScreen(win, hazard){
   $('#endTop3').innerHTML = '<div class="mr-title">🏆 TOP 3 (todos)</div><div class="mr-loading">carregando ranking compartilhado…</div>';
   overlayEl.style.display='flex';
 
-  // ---- ranking COMPARTILHADO (Supabase) com fallback local ----
+  // ---- ranking COMPARTILHADO (Supabase) com fallback local; nomes únicos (maior de cada) ----
   await sbInsert(entry);
-  const top = await sbTop(3);
-  const pos = await sbPosition(cs.score);
-  const shared = (top !== null && pos !== null);
-  const list = shared ? top : loadRank().slice(0,3);
-  const posText = shared ? `${pos}º no mundo 🌍` : `${localPos}º (local, offline)`;
+  const all = await sbAll(1000);
+  const shared = (all !== null);
+  const uniq = dedupeByName(shared ? all : loadRank());
+  const rank = uniq.findIndex(e => e.name === entry.name) + 1;
+  const list = uniq.slice(0,3);
+  const posText = shared
+    ? (rank>0 ? `${rank}º no mundo 🌍` : '—')
+    : `${rank>0?rank:localPos}º (local, offline)`;
   const title = shared ? '🏆 TOP 3 (todos)' : '🏆 TOP 3 (local, offline)';
 
   const posEl = $('#endPos'); if(posEl) posEl.textContent = posText;
