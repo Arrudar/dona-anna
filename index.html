@@ -312,6 +312,23 @@
     animation:shake .4s ease;
   }
   .cell.wrongflag{background:linear-gradient(160deg,#6b3030,#3a1414);}
+  /* ao perder: TODAS as armadilhas com fundo vermelho */
+  .cell.hz-reveal{background:radial-gradient(circle,#e2493a,#951616 72%)!important;box-shadow:inset 0 0 0 2px rgba(0,0,0,.5)!important;opacity:1!important;cursor:help;}
+  /* a armadilha em que a pessoa caiu: fundo PISCANTE */
+  .cell.hz-hit{animation:hzHitBlink .8s steps(1,end) infinite!important;cursor:help;}
+  @keyframes hzHitBlink{
+    0%,49%{background:radial-gradient(circle,#ff8a5a,#ff2020 68%);box-shadow:0 0 22px 6px rgba(255,70,50,.95),inset 0 0 0 2px #000;}
+    50%,100%{background:radial-gradient(circle,#6e1010,#320707 70%);box-shadow:0 0 8px 2px rgba(120,20,20,.5),inset 0 0 0 2px #000;}
+  }
+  /* balãozinho de informação (perigos ao perder / flores ao vencer) */
+  #cellTip{display:none;position:fixed;z-index:9995;max-width:240px;
+    font-family:Georgia,serif;font-size:13.5px;line-height:1.35;color:#3a2510;
+    background:linear-gradient(180deg,#fff6df,#ffe6ad);border:2px solid #6b4310;border-radius:10px;
+    padding:8px 11px;box-shadow:0 10px 26px rgba(0,0,0,.6);pointer-events:none;text-align:center;}
+  #cellTip b{color:#9c3410;}
+  #cellTip::after{content:'';position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);
+    border:8px solid transparent;border-top-color:#ffe6ad;filter:drop-shadow(0 1px 0 #6b4310);}
+  #cellTip.below::after{bottom:auto;top:-9px;border-top-color:transparent;border-bottom-color:#fff6df;}
   /* números clássicos, escuros e fortes sobre a terra clara */
   .n1{color:#1f5fd0;} .n2{color:#1f7a2e;} .n3{color:#c0271f;}
   .n4{color:#6a1fb0;} .n5{color:#8a3d10;} .n6{color:#12868a;}
@@ -598,6 +615,9 @@
   <!-- botão flutuante para reabrir o resultado depois de espiar o jardim -->
   <button id="reopenResult">📋 VER RESULTADO ▲</button>
 
+  <!-- balãozinho que aparece ao passar o mouse pelos perigos/flores no fim da fase -->
+  <div id="cellTip"></div>
+
   <!-- ===================== RANKING ===================== -->
   <div id="rankOverlay">
     <div class="panel">
@@ -704,15 +724,73 @@ const DIFFICULTIES = [
 
 // Perigos (minas). Cada um tem emoji + som próprio (sfx) + fala irônica de game over.
 const HAZARDS = [
-  { emoji:'🐍', sfx:'snake',   quip:'A cobra também procurava os óculos. Achou você primeiro.' },
-  { emoji:'🪜', sfx:'stairs',  quip:'Ixi! Foi só olhar pro lado que escorregou no degrau molhado: Escada 1 × 0 Dona Anna.' },
-  { emoji:'🧑‍⚕️', sfx:'physio', quip:'O fisioterapeuta te encurralou: "Bora fazer os exercícios, Dona Anna!" O pesadelo dela, enfim, realizado.' },
-  { emoji:'👵', sfx:'witch',   quip:'A vizinha te pegou pra conversar. Foram só 3 horas... até aqui.' },
-  { emoji:'🐔', sfx:'chicken', quip:'A galinha estava de mau humor. E tinha bico afiado.' },
-  { emoji:'🧼', sfx:'slip',    quip:'Sabão no chão + chinelo + 96 anos = física implacável.' },
-  { emoji:'💩', sfx:'plop',    quip:'A vaca deixou um recado no gramado. Você o encontrou.' },
-  { emoji:'🐕', sfx:'dog',     quip:'O cachorro achou que seus óculos eram petisco. E você, também.' },
+  { emoji:'🐍', sfx:'snake',   name:'Cobra',              why:'Dá o bote primeiro e pergunta depois.',                quip:'A cobra também procurava os óculos. Achou você primeiro.' },
+  { emoji:'🪜', sfx:'stairs',  name:'Escada molhada',     why:'Um degrau escorregadio e viramos tobogã aos 96!',      quip:'Ixi! Foi só olhar pro lado que escorregou no degrau molhado: Escada 1 × 0 Dona Anna.' },
+  { emoji:'🧑‍⚕️', sfx:'physio', name:'Fisioterapeuta',    why:'Persegue a vovó com "só mais uma sériezinha".',        quip:'O fisioterapeuta te encurralou: "Bora fazer os exercícios, Dona Anna!" O pesadelo dela, enfim, realizado.' },
+  { emoji:'👵', sfx:'witch',   name:'A vizinha',          why:'Te prende numa prosa de três horas sem respiro.',      quip:'A vizinha te pegou pra conversar. Foram só 3 horas... até aqui.' },
+  { emoji:'🐔', sfx:'chicken', name:'Galinha brava',      why:'Mau humor e bico afiado — nem chega perto.',           quip:'A galinha estava de mau humor. E tinha bico afiado.' },
+  { emoji:'🧼', sfx:'slip',    name:'Sabão no chão',      why:'Um passo e o piso vira pista de patinação.',           quip:'Sabão no chão + chinelo + 96 anos = física implacável.' },
+  { emoji:'💩', sfx:'plop',    name:'Recado da vaca',     why:'A vaca assinou o gramado. Pise por sua conta.',        quip:'A vaca deixou um recado no gramado. Você o encontrou.' },
+  { emoji:'🐕', sfx:'dog',     name:'Cachorro elétrico',  why:'Confunde tornozelo de vovó com petisco.',              quip:'O cachorro achou que seus óculos eram petisco. E você, também.' },
 ];
+
+// nomes das flores (p/ os balõezinhos ao vencer) — casa com WFLOWERS
+const FLOWER_NAMES = { '🌷':'tulipa','🌸':'flor de cerejeira','🌻':'girassol','🌼':'margarida','🌹':'rosa','💐':'buquê','🏵️':'roseta','🌺':'hibisco' };
+
+// balõezinhos fofos da Vovó Anna ao passar o mouse pelas flores (vitória).
+// {F} = nome da flor · {NAME} = nome do jogador. Sempre curtinhas.
+const FLOWER_TALK = [
+  '{F}! Não é a coisa mais linda? 🌸',
+  'olha só {F}... o jardim inteiro sorri junto.',
+  '{F} é das minhas favoritas — que perfeição!',
+  '{F} nasceu só pra alegrar o dia, viu?',
+  '{F} assim vale mais que joia, {NAME}.',
+  'que cor tem {F}, hein? De tirar o fôlego.',
+  '{F}... plantei pensando em vocês. 💚',
+  '{F} é puro abraço da natureza.',
+  'Andar por aqui me traz uma vida danada! 🌿',
+  'Nada me deixa mais viva que este jardim.',
+  'Ai, como eu amo ter a família toda por perto. ❤️',
+  'Reunir todo mundo é o que enche meu coração.',
+  'Será que tem cheiro melhor? Só o de um bom vinho. 🍷',
+  'Cheirosa... mas nada supera uma taça de tinto. 🍷',
+  'Mostrar as flores pros bisnetinhos é o auge da vida! 👶',
+  'Meus bisnetos vão amar ver isso tudo florido.',
+  'Ainda bem que você me ajudou, meu anjo. 🌷',
+  'Da última vez cruzei com uma cascavel pilantra aqui... fiquei mal, mas ela levou a pior! Hahaha 🐍',
+  'Jardim limpo é sinônimo de coração leve.',
+  'Cada florzinha dessa é uma vitória nossa!',
+  'Viu como valeu o trabalho? Tá um brinco! 🌼',
+  'Já pensei em morar bem aqui no meio das flores. Hihi.',
+  'Esse perfume no ar... isso sim é viver!',
+  'Depois a gente merece um vinhozinho, combinado? 🍷',
+  'Com você por perto até o jardim floresce mais rápido.',
+  'As abelhinhas vão fazer festa com tanta flor! 🐝',
+  'Um dia lindo desses pede um café com bolo. ☕',
+  'Se meus óculos vissem isso... ah, deixa, eu enxergo com o coração.',
+  'Tô me sentindo com 20 primaveras de novo! 🌸',
+  'Vou colher um raminho pra enfeitar a mesa do almoço.',
+  'Sabe o que é melhor que uma flor? Ter vocês aqui comigo.',
+  'Esse jardim guarda 96 anos de histórias, viu?',
+  'Floreou tudo! O Dudu vai amar quando chegar. 💐',
+  'Que delícia sentir o solzinho entre as flores. ☀️',
+  'Toda flor aqui foi regada com carinho... e um tiquinho de teimosia.',
+  'Vem, senta aqui do meu lado admirar o jardim.',
+  'Isso que é terapia: mão na terra e coração em paz.',
+  'Vou tirar uma foto — os bisnetinhos precisam ver! 📸',
+  'Um brinde ao jardim mais bonito da fazenda! 🍷',
+  'Se cuidar assim, ano que vem tá mais lindo ainda.',
+  'Flor bonita e família reunida: pra que mais?',
+  'Olha só, até os passarinhos vieram cantar. 🐦',
+  'Cada pétala dessa me lembra por que amo viver aqui.',
+  'Obrigada, viu? Sozinha eu não daria conta. 🌻',
+];
+function buildFlowerTip(emoji){
+  const f = FLOWER_NAMES[emoji] || 'florzinha';
+  const nm = escapeHtml(playerName || 'meu anjo');
+  const s = pick(FLOWER_TALK).replace(/{F}/g, f).replace(/{NAME}/g, nm);
+  return s.charAt(0).toUpperCase() + s.slice(1); // capitaliza a inicial (nomes de flor são minúsculos)
+}
 
 // Falas do avatar da Dona Anna durante o passeio
 const RELIEF = ['Ufa!', 'Essa passou perto...', 'Ainda inteira!', 'Fé em Deus.', 'Coração, calma.'];
@@ -1205,7 +1283,7 @@ function buildMenu(){
 // ============================================================
 function startGame(){
   resetTutorialUI();                 // garante que nenhum resquício do tutorial (balão/flag) vaze pra fase
-  $('#reopenResult').style.display='none';
+  $('#reopenResult').style.display='none'; hideCellTip();
   rows = cfg.rows; cols = cfg.cols; mineTotal = cfg.mines;
   grid = []; started = false; over = false; clockOn = false;
   flagsUsed = 0; revealedCount = 0; timer = 0;
@@ -1419,6 +1497,24 @@ function onFlag(r,c){
 // ============================================================
 //  FIM DE JOGO
 // ============================================================
+// ---- balãozinho ao passar o mouse pelos perigos (derrota) / flores (vitória) ----
+function showCellTip(el, html){
+  const tip = document.getElementById('cellTip'); if(!tip) return;
+  tip.innerHTML = html; tip.style.display='block';
+  const r = el.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+  let left = r.left + r.width/2 - tr.width/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - tr.width - 8));
+  let top = r.top - tr.height - 12, below = false;
+  if(top < 8){ top = r.bottom + 12; below = true; }
+  tip.classList.toggle('below', below);
+  tip.style.left = Math.round(left)+'px'; tip.style.top = Math.round(top)+'px';
+}
+function hideCellTip(){ const t=document.getElementById('cellTip'); if(t) t.style.display='none'; }
+function attachTip(el, html){
+  el.addEventListener('mouseenter', ()=>showCellTip(el, html));
+  el.addEventListener('mouseleave', hideCellTip);
+}
+
 function loseGame(hitCell){
   over = true;
   stopTimer();
@@ -1429,13 +1525,15 @@ function loseGame(hitCell){
   document.body.classList.add('screen-shake');
   setTimeout(()=>document.body.classList.remove('screen-shake'), 450);
 
-  // revela todos os perigos + marca bandeiras erradas
+  // revela TODAS as armadilhas com fundo vermelho (a pisada fica piscante) + balãozinho no hover
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     const cell = grid[r][c];
-    if(cell.mine && !cell.revealed && !cell.flagged){
-      cell.el.classList.add('open');
+    if(cell.mine){
+      cell.el.classList.add('open','hz-reveal');
       cell.el.textContent = cell.hazard.emoji;
-      cell.el.style.opacity='.85';
+      cell.el.style.opacity = '1';
+      if(cell === hitCell) cell.el.classList.add('hz-hit'); // a armadilha em que pisou pisca
+      attachTip(cell.el, `<b>${cell.hazard.name}</b> — ${cell.hazard.why}`);
     }
     if(cell.flagged && !cell.mine){
       cell.el.classList.add('wrongflag');
@@ -1459,7 +1557,11 @@ function checkWin(){
     const WFLOWERS=['🌷','🌸','🌻','🌼','🌹','💐','🏵️','🌺'];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
       const cell = grid[r][c];
-      if(cell.mine){ cell.el.classList.add('flag','bloom'); cell.el.textContent = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)]; }
+      if(cell.mine){
+        const emoji = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)];
+        cell.el.classList.add('flag','bloom'); cell.el.textContent = emoji;
+        attachTip(cell.el, buildFlowerTip(emoji)); // balãozinho fofo da Vovó ao passar o mouse
+      }
     }
     saveBest(timer);
     setTimeout(()=>endScreen(true, null), 2000); // deixa ~2s p/ o jogador admirar o jardim florido
@@ -1501,6 +1603,7 @@ async function endScreen(win, hazard){
   $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
   $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div><div class="mr-loading">carregando…</div>';
   $('#reopenResult').style.display='none';
+  hideCellTip();
   overlayEl.style.display='flex';
 
   // ---- rankings COMPARTILHADOS (Supabase): todos os tempos (nomes únicos) + hoje (todas as jogadas) ----
@@ -1633,7 +1736,7 @@ const TUT = [
   { require:'special', highlight:['#furyBtn'], onEnter:()=>tutShowFury(true), text:'Olha, encheu e <b>brilhou</b>! ✨ Quando isso acontece, aperte <b>USAR AURA DA VOVÓ</b>: ela faz uma <b>limpeza geral</b> no jardim pra te ajudar a avançar mais rápido! 🌟' },
   { require:'next', text:'UAU! ☄️✨ A Aura fez uma limpeza geral e adiantou tudo! Poder cósmico não falha, né, querido {NAME}? 🌸' },
   { require:'next', text:'Sobre a <b>PONTUAÇÃO</b> 🏆: quanto <b>maior e mais difícil</b> a fase, <b>mais pontos</b> ela vale! O cálculo é: <b>pontos-base da fase − o tempo + 50 por armadilha</b> que você achou. Rápido e caprichado = topo do <b>ranking</b>!' },
-  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo. Bora de verdade? (E se eu te chamar de Dudu — nome do meu filho — sem querer, releva: na minha idade a gente se confunde! 😄👵)' },
+  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo, sem chutar. Bora de verdade? 😄👵' },
 ];
 function clearTutHl(){
   document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
@@ -1773,7 +1876,7 @@ window.addEventListener('pointerup', dEnd);
 // ============================================================
 //  LIGAÇÕES DE UI
 // ============================================================
-function goMenu(){ resetTutorialUI(); $('#reopenResult').style.display='none'; stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
+function goMenu(){ resetTutorialUI(); $('#reopenResult').style.display='none'; hideCellTip(); stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
 $('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))){ S.click(); return; } S.click(); startGame(); };
 $('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
@@ -1788,7 +1891,7 @@ $('#nextBtn').onclick  = ()=>{ S.click(); const i=DIFFICULTIES.indexOf(cfg); if(
 $('#menuBtn').onclick  = ()=>{ S.click(); goMenu(); };
 // espiar o jardim: minimiza o painel de resultado e mostra o botão flutuante p/ reabrir
 $('#peekBtn').onclick  = ()=>{ S.click(); overlayEl.style.display='none'; $('#reopenResult').style.display='block'; };
-$('#reopenResult').onclick = ()=>{ S.click(); $('#reopenResult').style.display='none'; overlayEl.style.display='flex'; };
+$('#reopenResult').onclick = ()=>{ S.click(); hideCellTip(); $('#reopenResult').style.display='none'; overlayEl.style.display='flex'; };
 $('#rankBtn').onclick   = ()=>{ S.click(); renderRank(); $('#rankOverlay').style.display='flex'; };
 $('#rankClose').onclick = ()=>{ S.click(); $('#rankOverlay').style.display='none'; };
 
