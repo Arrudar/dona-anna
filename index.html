@@ -85,6 +85,11 @@
     text-shadow:0 1px 0 #000;
   }
   .btn.sm{padding:8px 14px;font-size:13px;}
+  .btn.green{
+    background:linear-gradient(180deg,#8fe06a,#4f9235 55%,#3a6f28);color:#0c2a0c;
+    box-shadow:0 4px 0 #24521a,0 8px 14px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,255,255,.4);
+  }
+  .btn.green:active{transform:translateY(4px);box-shadow:0 0 0 #24521a,0 3px 6px rgba(0,0,0,.6);}
 
   /* ===================== MENU ===================== */
   #menu{width:100%;max-width:720px;text-align:center;animation:fadeIn .5s ease;}
@@ -481,6 +486,7 @@
       <div class="mini-detail" id="endDetail"></div>
       <div class="mini-rank" id="endTop3"></div>
       <div class="panel-actions">
+        <button class="btn green" id="nextBtn" style="display:none;">🌿 JOGAR NUM JARDIM MAIOR</button>
         <button class="btn" id="againBtn">↻ JOGAR DE NOVO</button>
         <button class="btn ghost" id="menuBtn">MENU</button>
       </div>
@@ -1288,6 +1294,9 @@ async function endScreen(win, hazard){
   lastScore = cs.score;
   if(win){ const wi = DIFFICULTIES.indexOf(cfg); // venceu -> libera a próxima fase para este nome
     if(wi>=0 && wi+1<DIFFICULTIES.length){ unlockedSet.add(wi+1); LS.set(unlockKey(), JSON.stringify([...unlockedSet])); } }
+  // botão "jardim maior": só na vitória e se houver próxima fase
+  const nb = $('#nextBtn'), ni = DIFFICULTIES.indexOf(cfg)+1;
+  nb.style.display = (win && ni>0 && ni<DIFFICULTIES.length) ? '' : 'none';
 
   $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
@@ -1408,6 +1417,7 @@ $('#volDown').onclick = ()=>{ S.click(); applyMusicVol(musicVol-10); };
 $('#volUp').onclick   = ()=>{ S.click(); applyMusicVol(musicVol+10); };
 $('#nameChange').onclick = ()=>{ S.click(); openNamePopup(); };
 $('#againBtn').onclick = ()=>{ S.click(); startGame(); };
+$('#nextBtn').onclick  = ()=>{ S.click(); const i=DIFFICULTIES.indexOf(cfg); if(i>=0 && i+1<DIFFICULTIES.length){ cfg=DIFFICULTIES[i+1]; startGame(); } };
 $('#menuBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#rankBtn').onclick   = ()=>{ S.click(); renderRank(); $('#rankOverlay').style.display='flex'; };
 $('#rankClose').onclick = ()=>{ S.click(); $('#rankOverlay').style.display='none'; };
