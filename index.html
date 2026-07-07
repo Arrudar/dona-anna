@@ -655,7 +655,7 @@ let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
 let clockOn = false; // (legado, não usado no modelo clássico)
-let fury = 0; const FURY_MAX = 35; let furyBlast = false; // especial "Fúria da Vovó" (barra 0–35)
+let fury = 0; let furyMax = 15; let furyBlast = false; // especial "Fúria da Vovó" (máx por fase: 15,20,25,30)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
 const _ls = (()=>{ try{ return window.localStorage; }catch(e){ return null; } })();
@@ -1127,7 +1127,7 @@ function startGame(){
       grid[r][c].el.appendChild(s);
     }
   }
-  fury = 0; furyBlast = false; updateFuryUI(); // reseta o especial Fúria da Vovó
+  fury = 0; furyBlast = false; furyMax = 15 + 5*DIFFICULTIES.indexOf(cfg); updateFuryUI(); // máx por fase: 15/20/25/30
 
   hideAnna();
   fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
@@ -1411,11 +1411,11 @@ function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 //  FÚRIA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
 // ============================================================
 const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
-function addFury(n){ if(furyBlast) return; fury = Math.min(FURY_MAX, fury + n); updateFuryUI(); }
+function addFury(n){ if(furyBlast) return; fury = Math.min(furyMax, fury + n); updateFuryUI(); }
 function updateFuryUI(){
-  const ready = fury >= FURY_MAX && !over;
-  furyFill.style.width = Math.round(fury/FURY_MAX*100) + '%';
-  furyVal.textContent = fury + '/' + FURY_MAX;
+  const ready = fury >= furyMax && !over;
+  furyFill.style.width = Math.round(fury/furyMax*100) + '%';
+  furyVal.textContent = fury + '/' + furyMax;
   furyWrap.classList.toggle('ready', ready);
   furyBtn.style.display = ready ? '' : 'none';
 }
@@ -1434,7 +1434,7 @@ function dropComets(){
   setTimeout(()=>{ cometLayer.innerHTML=''; }, 1900);
 }
 function useFury(){
-  if(fury < FURY_MAX || over || !started) return;
+  if(fury < furyMax || over || !started) return;
   furyBtn.style.display='none';
   if(soundOn){ beep(160,0.5,'sawtooth',0.2,60); [660,880,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.15),120+i*90)); }
   dropComets();
@@ -1442,14 +1442,15 @@ function useFury(){
   setTimeout(()=>document.body.classList.remove('screen-shake'), 600);
   furyBlast = true;
   setTimeout(()=>{
-    // cometas caem e abrem o mapa SÓ em áreas sem armadilhas
+    // cometas ELIMINAM um número aleatório de casas (entre 15 e o máx da fase), só em áreas sem armadilhas
     const safe=[];
     for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.revealed && !g.flagged) safe.push([r,c]); }
     for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
-    const hits = Math.max(6, Math.round(safe.length*0.5));
-    for(let i=0;i<hits;i++){ const p=safe[i]; if(!grid[p[0]][p[1]].revealed) floodReveal(p[0],p[1]); }
+    const n = 15 + Math.floor(Math.random()*(furyMax-15+1)); // aleatório 15..furyMax
+    const hits = Math.min(n, safe.length);
+    for(let i=0;i<hits;i++){ const p=safe[i]; revealCell(grid[p[0]][p[1]], p[0], p[1]); }
     furyBlast=false; fury=0; updateFuryUI();
-    checkWin(); // se ficou 100% limpo -> vitória; senão continua jogando
+    checkWin(); // se todas as casas seguras foram eliminadas -> vitória; senão continua jogando
   }, 650);
 }
 
