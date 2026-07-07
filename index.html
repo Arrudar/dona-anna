@@ -171,9 +171,9 @@
   }
   /* célula coberta = MOITA folhosa do jardim (textura de arbusto) */
   .cell{
-    width:34px;height:34px;
+    width:var(--cell,34px);height:var(--cell,34px);
     display:flex;align-items:center;justify-content:center;
-    font-size:19px;font-weight:900;cursor:pointer;
+    font-size:calc(var(--cell,34px)*0.56);font-weight:900;cursor:pointer;
     border-radius:4px;
     background:
       radial-gradient(circle at 28% 24%, rgba(230,255,200,.30) 0 2.5px, transparent 3.5px),
@@ -193,7 +193,7 @@
   /* florzinha decorativa em algumas moitas (não é perigo) */
   .cell .deco{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:16px;pointer-events:none;opacity:.72;
+    font-size:calc(var(--cell,34px)*0.46);pointer-events:none;opacity:.72;
     filter:drop-shadow(0 1px 1px rgba(0,0,0,.35));
   }
   /* célula revelada = TERRA fofa com pedrinhas e pétalas caídas */
@@ -219,7 +219,7 @@
   .n1{color:#1f5fd0;} .n2{color:#1f7a2e;} .n3{color:#c0271f;}
   .n4{color:#6a1fb0;} .n5{color:#8a3d10;} .n6{color:#12868a;}
   .n7{color:#111;} .n8{color:#555;}
-  .cell.open span{font-size:22px;font-weight:900;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.45);}
+  .cell.open span{font-size:calc(var(--cell,34px)*0.62);font-weight:900;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.45);}
 
   .hint{margin-top:2px;font-size:12px;color:#9c8862;font-family:Georgia,serif;font-weight:normal;letter-spacing:.5px;}
   .best{font-size:12px;color:#a3906c;font-family:Georgia,serif;font-weight:normal;margin-top:2px;}
@@ -305,6 +305,19 @@
   .gate-err{color:#ff6b5e;font-family:Georgia,serif;font-style:italic;font-size:13px;min-height:20px;margin:8px 0 2px;}
   .shake-panel{animation:shake .4s ease;}
 
+  /* ---- tela de regras (briefing) ---- */
+  #rules{display:none;position:fixed;inset:0;z-index:10003;background:rgba(6,4,2,.9);
+    align-items:center;justify-content:center;padding:16px;animation:fadeIn .3s ease;}
+  #rules .panel{max-width:520px;max-height:88vh;overflow-y:auto;text-align:left;}
+  #rules h2{text-align:center;}
+  .rules-list{display:flex;flex-direction:column;gap:10px;margin:14px 0 8px;}
+  .rules-item{background:rgba(0,0,0,.24);border:1px solid #3a2716;border-radius:8px;padding:10px 12px;}
+  .rules-item .rt{color:var(--amber);font-size:13px;letter-spacing:1px;margin-bottom:4px;}
+  .rules-item .rd{font-family:Georgia,serif;font-weight:normal;font-size:13.5px;line-height:1.5;color:#d9c9a6;}
+  .rules-item .rd b{color:#f0d9a0;}
+  #rules .panel-actions{position:sticky;bottom:-1px;padding:12px 0 2px;
+    background:linear-gradient(180deg,rgba(20,13,7,0),#140d07 45%);}
+
   /* ---- pop-up de nome obrigatório ---- */
   #namePopup{display:none;position:fixed;inset:0;z-index:10002;background:rgba(6,4,2,.9);
     align-items:center;justify-content:center;padding:20px;animation:fadeIn .3s ease;}
@@ -375,10 +388,14 @@
   .screen-shake{animation:screenShake .4s ease;}
   @keyframes screenShake{0%,100%{transform:none;}25%{transform:translate(-5px,3px) rotate(-.3deg);}50%{transform:translate(5px,-3px) rotate(.3deg);}75%{transform:translate(-3px,-4px);}}
 
-  @media (max-width:520px){
-    .cell{width:26px;height:26px;font-size:15px;}
-    .cell.open span{font-size:17px;}
-    #board{transform:rotateX(12deg);}
+  /* quando o tabuleiro NÃO cabe (JS marca .scrollmode): achata e rola na horizontal */
+  .board-wrap.scrollmode{ perspective:none; display:block; overflow-x:auto; overflow-y:hidden;
+    padding:8px 2px 14px; -webkit-overflow-scrolling:touch; }
+  .board-wrap.scrollmode #board{ transform:none; margin:0 auto; }
+  /* telas pequenas: bandeirinha vai pro canto inferior (alcance do polegar) */
+  @media (max-width:760px){
+    #flagPalette{ top:auto; bottom:84px; transform:none; right:8px; padding:8px 6px; }
+    .hud{ margin-bottom:14px; }
   }
 </style>
 </head>
@@ -413,6 +430,7 @@
 
       <div class="menu-actions">
         <button class="btn" id="startBtn">▶ COMEÇAR</button>
+        <button class="btn ghost sm" id="rulesBtn">📖 REGRAS</button>
         <button class="btn ghost sm" id="rankBtn">🏆 RANKING</button>
         <button class="btn ghost sm" id="nameChange">✎ TROCAR NOME</button>
       </div>
@@ -428,7 +446,7 @@
       <div class="board-wrap">
         <div id="board"></div>
       </div>
-      <div class="hint">Clique = revelar &nbsp;•&nbsp; o número = perigos nas casas vizinhas &nbsp;•&nbsp; marcar cilada: <b>clique direito</b> ou <b>arraste a 🚩</b> (canto direito ➡) até a casa</div>
+      <div class="hint">Clique = revelar &nbsp;•&nbsp; marcar cilada: <b>arraste a 🚩</b> (➡) ou clique direito &nbsp;•&nbsp; <b>tocar numa bandeira = tirar</b></div>
       <div class="best" id="bestTime"></div>
       <div class="menu-actions" style="margin-top:14px;">
         <button class="btn ghost sm" id="backBtn">↩ MENU</button>
@@ -491,6 +509,23 @@
       <input id="nameInput" maxlength="14" placeholder="Seu nome aqui, vovó">
       <div class="panel-actions" style="margin-top:16px;">
         <button class="btn" id="nameOk">▶ BORA PASSEAR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== REGRAS (briefing) ===================== -->
+  <div id="rules">
+    <div class="panel">
+      <h2 class="win" style="font-size:24px;">📖 COMO JOGAR</h2>
+      <div class="rules-list">
+        <div class="rules-item"><div class="rt">🎯 OBJETIVO</div><div class="rd">Dona Anna quer passear pelo jardim inteiro. Use a <b>pá</b> (seu cursor / toque) pra <b>revelar todas as casas seguras</b>, sem pisar nas <b>armadilhas</b> escondidas (🐍 cobra, 🪜 escada, 🧑‍⚕️ fisioterapeuta...). Limpou tudo = achou os óculos e venceu! 👓</div></div>
+        <div class="rules-item"><div class="rt">🔢 OS NÚMEROS</div><div class="rd">Ao abrir uma casa pode surgir um <b>número</b>: ele diz <b>quantas armadilhas há nas casas vizinhas</b> (as 8 em volta). Casa <b>vazia</b> = nenhuma armadilha por perto (e ela abre a vizinhança sozinha). Use os números pra <b>deduzir</b> onde estão as ciladas.</div></div>
+        <div class="rules-item"><div class="rt">🚩 MARCAR UMA ARMADILHA</div><div class="rd">Desconfiou de uma casa? <b>Arraste a bandeirinha vermelha</b> (no canto ➡) até ela — funciona no celular. No computador, o <b>clique direito</b> também marca.</div></div>
+        <div class="rules-item"><div class="rt">↩️ TIRAR UMA BANDEIRA</div><div class="rd">Marcou no lugar errado? É só <b>tocar (clicar) na casa da bandeira</b> que ela sai. Simples assim.</div></div>
+        <div class="rules-item"><div class="rt">💯 PONTOS & RANKING</div><div class="rd">Cada fase tem uma pontuação-base; você <b>perde pontos com o tempo</b> e <b>ganha 50</b> por armadilha descoberta. Rapidez + capricho = topo do <b>ranking compartilhado</b>! A <b>1ª jogada é sempre segura</b>.</div></div>
+      </div>
+      <div class="panel-actions">
+        <button class="btn" id="rulesOk">▶ BORA PASSEAR!</button>
       </div>
     </div>
   </div>
@@ -760,6 +795,7 @@ function idleComplain(){
 }
 // reposiciona a vovó se a janela mudar de tamanho
 window.addEventListener('resize', ()=>{
+  if(typeof fitBoard==='function' && cols) fitBoard(); // reajusta as casas
   if(annaCell && started && !over){
     const r = annaCell.getBoundingClientRect();
     annaX = annaBaseX = r.left + r.width/2; annaY = annaBaseY = r.top + r.height/2;
@@ -962,10 +998,26 @@ function startGame(){
     }
   }
   hideAnna();
+  fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
   menuEl.style.display='none';
   gameEl.style.display='flex';
   overlayEl.style.display='none';
   flagPalette.style.display='flex'; // bandeirinha arrastável disponível
+}
+
+// dimensiona a célula pra o tabuleiro caber; se não couber, ativa modo rolável (achatado)
+function fitBoard(){
+  const gap=3, pad=14, bord=3, nc=cols||9;
+  const vw = window.innerWidth;
+  // desconta padding do body(16*2) + da board-wrap(6*2) + folga
+  const maxBoard = Math.min(vw - 44, 900);
+  const usable = maxBoard - pad*2 - bord*2 - (nc-1)*gap;
+  let cs = Math.floor(usable / nc);
+  cs = Math.max(20, Math.min(38, cs));            // 20px = mínimo tocável
+  document.documentElement.style.setProperty('--cell', cs+'px');
+  const boardW = nc*cs + (nc-1)*gap + pad*2 + bord*2;
+  const wrap = document.querySelector('.board-wrap');
+  if(wrap) wrap.classList.toggle('scrollmode', boardW > vw - 40); // não coube -> rola horizontal
 }
 
 // posiciona minas DEPOIS do 1º clique (nunca morre de cara)
@@ -1007,7 +1059,8 @@ function forEachNeighbor(r,c,fn){
 function onReveal(r,c){
   if(over) return;
   const cell = grid[r][c];
-  if(cell.flagged || cell.revealed) return;
+  if(cell.revealed) return;
+  if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
   if(!started){
     started = true;
@@ -1223,10 +1276,20 @@ function confirmName(){
   LS.set('donaAnna_name', playerName);
   namePopup.style.display='none';
   if(musicOn) Music.start(); // 1º gesto garantido para o áudio
+  if(LS.get('donaAnna_rules_seen') !== '1') openRules(); // briefing no 1º acesso
 }
 nameInput.addEventListener('input', validateName);
 nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') confirmName(); });
 nameOk.onclick = ()=>{ S.click(); confirmName(); };
+
+// ============================================================
+//  REGRAS (briefing) — botão no menu + abre sozinho no 1º acesso
+// ============================================================
+const rulesEl = $('#rules');
+function openRules(){ rulesEl.style.display='flex'; const pnl=rulesEl.querySelector('.panel'); if(pnl) pnl.scrollTop=0; }
+function closeRules(){ rulesEl.style.display='none'; LS.set('donaAnna_rules_seen','1'); }
+$('#rulesOk').onclick  = ()=>{ S.click(); closeRules(); };
+$('#rulesBtn').onclick = ()=>{ S.click(); openRules(); };
 
 // ============================================================
 //  ARRASTAR A BANDEIRINHA até a cilada (funciona no celular via pointer events)
@@ -1239,7 +1302,8 @@ function dEnd(e){
   if(!dragging) return; dragging=false; dragFlag.style.display='none';
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const cell = (el && el.closest) ? el.closest('.cell') : null;
-  if(cell && cell.dataset.r!=null){ const r=+cell.dataset.r, c=+cell.dataset.c; if(grid[r] && grid[r][c] && !grid[r][c].revealed) onFlag(r,c); }
+  if(cell && cell.dataset.r!=null){ const r=+cell.dataset.r, c=+cell.dataset.c;
+    if(grid[r] && grid[r][c] && !grid[r][c].revealed && !grid[r][c].flagged) onFlag(r,c); } // arrastar só ADICIONA bandeira
 }
 flagSrc.addEventListener('pointerdown', dStart);
 window.addEventListener('pointermove', dMove);
