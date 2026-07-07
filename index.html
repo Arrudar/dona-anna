@@ -164,7 +164,7 @@
   }
   .face:active{transform:translateY(3px);}
 
-  /* ===================== FÚRIA DA VOVÓ (especial) ===================== */
+  /* ===================== AURA DA VOVÓ (especial) ===================== */
   #furyWrap{width:100%;max-width:640px;margin:-8px 0 16px;display:flex;flex-direction:column;align-items:center;gap:10px;}
   .fury-row{display:flex;align-items:center;gap:10px;width:100%;}
   .fury-lbl{font-size:12px;letter-spacing:1px;color:#ffb84a;white-space:nowrap;text-shadow:0 1px 0 #000;}
@@ -191,7 +191,7 @@
     80%{transform:translate(2px,-1px) rotate(.12deg);}
     100%{transform:translate(0,0) rotate(0);}
   }
-  /* aura neon amarelada ao redor da tela quando a Fúria está carregada */
+  /* aura neon amarelada ao redor da tela quando a Aura está carregada */
   #furyAura{position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:0;transition:opacity .4s ease;
     box-shadow:inset 0 0 55px 12px rgba(255,214,90,.6), inset 0 0 150px 34px rgba(255,190,40,.28);}
   #furyAura.on{opacity:1;animation:auraPulse 1.6s ease-in-out infinite;}
@@ -535,11 +535,11 @@
       </div>
       <div id="furyWrap">
         <div class="fury-row">
-          <span class="fury-lbl">⚡ FÚRIA DA VOVÓ</span>
+          <span class="fury-lbl">⚡ AURA DA VOVÓ</span>
           <div class="fury-bar"><div id="furyFill"></div></div>
           <b id="furyVal">0/35</b>
         </div>
-        <button class="btn" id="furyBtn" style="display:none;">☄️ USAR FÚRIA DA VOVÓ</button>
+        <button class="btn" id="furyBtn" style="display:none;">☄️ USAR AURA DA VOVÓ</button>
       </div>
       <div class="board-wrap">
         <div id="board"></div>
@@ -627,6 +627,7 @@
         <div class="rules-item"><div class="rt">🔢 OS NÚMEROS</div><div class="rd">Ao abrir uma casa pode surgir um <b>número</b>: ele diz <b>quantas armadilhas há nas casas vizinhas</b> (as 8 em volta). Casa <b>vazia</b> = nenhuma armadilha por perto (e ela abre a vizinhança sozinha). Use os números pra <b>deduzir</b> onde estão as ciladas.</div></div>
         <div class="rules-item"><div class="rt">🚩 MARCAR UMA ARMADILHA</div><div class="rd">Desconfiou de uma casa? <b>Arraste a bandeirinha vermelha</b> (no canto ➡) até ela — funciona no celular. No computador, o <b>clique direito</b> também marca.</div></div>
         <div class="rules-item"><div class="rt">↩️ TIRAR UMA BANDEIRA</div><div class="rd">Marcou no lugar errado? É só <b>tocar (clicar) na casa da bandeira</b> que ela sai. Simples assim.</div></div>
+        <div class="rules-item"><div class="rt">⚡ AURA DA VOVÓ (especial)</div><div class="rd">A barra <b>Aura da Vovó</b> enche com os <b>números que você revela</b>. Quando enche, ela <b>brilha</b> e aparece o botão: use pra <b>cometas caírem ☄️</b> e limparem várias casas seguras de uma vez!</div></div>
         <div class="rules-item"><div class="rt">💯 PONTOS & RANKING</div><div class="rd">Cada fase tem uma pontuação-base; você <b>perde pontos com o tempo</b> e <b>ganha 50</b> por armadilha descoberta. Rapidez + capricho = topo do <b>ranking compartilhado</b>! A <b>1ª jogada é sempre segura</b>.</div></div>
       </div>
       <div class="panel-actions">
@@ -719,7 +720,7 @@ let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
 let clockOn = false; // (legado, não usado no modelo clássico)
-let fury = 0; let furyMax = 10; let furyBlast = false; // especial "Fúria da Vovó" (máx por fase: 10,15,20,25)
+let fury = 0; let furyMax = 10; let furyBlast = false; // especial "Aura da Vovó" (máx por fase: 10,15,20,25)
 let tutorial = false, tutStep = 0; // modo tutorial (onboarding)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
@@ -1339,7 +1340,7 @@ function revealCell(cell,r,c){
     cell.el.textContent = cell.hazard.emoji;
   }else if(cell.adj>0){
     cell.el.innerHTML = `<span class="n${cell.adj}">${cell.adj}</span>`;
-    addFury(cell.adj); // carrega a Fúria da Vovó com a soma dos números que aparecem
+    addFury(cell.adj); // carrega a Aura da Vovó com a soma dos números que aparecem
   }
 }
 
@@ -1506,7 +1507,7 @@ function startTimer(){
 function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 
 // ============================================================
-//  FÚRIA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
+//  AURA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
 // ============================================================
 const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
 function addFury(n){ if(furyBlast) return; fury = Math.min(furyMax, fury + n); updateFuryUI(); }
@@ -1532,12 +1533,26 @@ function dropComets(){
   }
   setTimeout(()=>{ cometLayer.innerHTML=''; }, 1900);
 }
+// som MÁGICO da Aura (tipo transformação Saiyajin): energia carregando + brilho cintilante + burst
+function auraSound(){
+  if(!soundOn) return;
+  try{
+    beep(110, 1.0, 'sawtooth', 0.16, 1100);    // sweep de energia (grave -> agudo)
+    beep(220, 1.0, 'sine', 0.11, 1900);         // camada brilhante subindo
+    noise(0.9, 0.09, 'highpass', 2200, 0.8);    // crepitar elétrico da energia
+    [784,988,1175,1568,1976,2637].forEach((f,i)=>setTimeout(()=>beep(f,0.16,'triangle',0.10), i*80)); // faíscas subindo
+    setTimeout(()=>{                             // BURST da transformação!
+      beep(80, 0.7, 'sine', 0.24, 55);          // impacto grave
+      [523,659,784,1046,1319].forEach(f=>beep(f,0.6,'square',0.085)); // acorde brilhante e poderoso
+    }, 560);
+  }catch(e){}
+}
 function useFury(){
   if(over || !started) return;
   if(tutorial){ if(!(TUT[tutStep] && TUT[tutStep].require==='special')) return; }
   else if(fury < furyMax) return;
   furyBtn.style.display='none';
-  if(soundOn){ beep(160,0.5,'sawtooth',0.2,60); [660,880,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.15),120+i*90)); }
+  auraSound();
   dropComets();
   const bw = document.querySelector('.board-wrap');
   if(bw){ bw.classList.remove('shaking'); void bw.offsetWidth; bw.classList.add('shaking'); setTimeout(()=>bw.classList.remove('shaking'), 720); }
@@ -1551,7 +1566,7 @@ function useFury(){
       safe.forEach(p=>revealCell(grid[p[0]][p[1]], p[0], p[1])); // no tutorial, limpa TUDO
       furyBlast=false; fury=0; updateFuryUI(); tutAdvance(); return;
     }
-    const low = 10; // elimina entre 10 e o máximo da Fúria daquela fase
+    const low = 10; // elimina entre 10 e o máximo da Aura daquela fase
     const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório 10..furyMax
     const hits = Math.min(n, safe.length);
     for(let i=0;i<hits;i++){ const p=safe[i]; revealCell(grid[p[0]][p[1]], p[0], p[1]); }
@@ -1575,8 +1590,8 @@ const TUT = [
   { require:'next', text:'Isso, meu amor! 🚩 A armadilha ficou marcada. Marcou errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
   { require:'next', highlight:['#mineCount'], text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
   { require:'next', highlight:['#timer'], text:'O ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b> ganha!' },
-  { require:'next', highlight:['#furyWrap'], text:'E esta barra ⚡ é a <b>FÚRIA DA VOVÓ</b>, seu poder especial. Ela <b>enche com os números</b> que você vai revelando.' },
-  { require:'special', highlight:['#furyBtn'], onEnter:()=>{ fury=furyMax; updateFuryUI(); }, text:'Olha, encheu! Quando a barra <b>brilha</b>, aparece o botão. Aperte <b>USAR FÚRIA DA VOVÓ</b>! ✨' },
+  { require:'next', highlight:['#furyWrap'], text:'E esta barra ⚡ é a <b>AURA DA VOVÓ</b>, seu poder especial. Ela <b>enche com os números</b> que você vai revelando.' },
+  { require:'special', highlight:['#furyBtn'], onEnter:()=>{ fury=furyMax; updateFuryUI(); }, text:'Olha, encheu! Quando a barra <b>brilha</b>, aparece o botão. Aperte <b>USAR AURA DA VOVÓ</b>! ✨' },
   { require:'next', text:'UAU! ☄️ Os <b>cometas</b> caíram e limparam o resto do jardim de uma vez só! Poder de vó não falha. 🌸' },
   { require:'next', text:'Ah, uma dica: se você <b>travar pensando</b>, eu uso minha experiência e <b>pisco uma casa segura em verde</b> 🌿 pra te ajudar. Pode confiar!' },
   { require:'next', text:'Sua <b>PONTUAÇÃO</b>: cada fase começa com pontos, você perde um tiquinho com o tempo, e <b>ganha por cada armadilha achada</b>. Rápido + caprichado = topo do <b>ranking</b>! 🏆' },
