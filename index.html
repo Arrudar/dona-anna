@@ -198,10 +198,13 @@
   @keyframes auraPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 
   /* ===================== TUTORIAL ===================== */
-  #tutBanner{display:none;position:fixed;left:50%;bottom:16px;transform:translateX(-50%);
+  #tutBanner{display:none;position:fixed;left:50%;top:10px;bottom:auto;transform:translateX(-50%);
     width:min(680px,94vw);z-index:9992;align-items:center;gap:12px;
-    background:linear-gradient(180deg,#2a1c10,#140d07);border:3px solid #000;border-top-color:#5a3a1c;
-    border-radius:12px;padding:13px 15px;box-shadow:0 16px 44px rgba(0,0,0,.75);}
+    background:linear-gradient(180deg,rgba(42,28,16,.96),rgba(20,13,7,.96));border:3px solid #000;border-top-color:#ffb84a;
+    border-radius:12px;padding:13px 15px;box-shadow:0 16px 44px rgba(0,0,0,.75),0 0 0 2px rgba(255,184,74,.25);
+    transition:opacity .35s ease;}
+  #tutBanner.acting{opacity:.45;} /* fica translúcido na hora de você agir (o tabuleiro aparece bem) */
+  #tutBanner.acting:hover{opacity:1;}
   .tut-face{font-size:40px;flex:0 0 auto;filter:drop-shadow(0 3px 3px rgba(0,0,0,.5));animation:annaIdle 1.9s ease-in-out infinite;}
   .tut-text{flex:1;font-family:Georgia,serif;font-size:15px;line-height:1.5;color:#f0e2c4;text-align:left;}
   .tut-text b{color:var(--amber);}
@@ -214,8 +217,13 @@
     0%,100%{box-shadow:0 0 0 3px rgba(70,255,100,.35),0 0 12px 3px rgba(70,255,100,.6);}
     50%{box-shadow:0 0 0 4px rgba(70,255,100,.6),0 0 22px 7px rgba(70,255,100,.95);}
   }
+  /* armadilha certa (vermelho) e casa duvidosa (amarelo) nas páginas de dedução */
+  .tut-peek{position:relative;z-index:600;border-radius:6px;outline:3px solid #ff5a3c;outline-offset:1px;animation:tutPulseRed .8s ease-in-out infinite;}
+  @keyframes tutPulseRed{0%,100%{box-shadow:0 0 0 3px rgba(255,90,60,.4),0 0 12px 3px rgba(255,90,60,.6);}50%{box-shadow:0 0 0 4px rgba(255,90,60,.75),0 0 22px 7px rgba(255,90,60,.95);}}
+  .tut-warn{position:relative;z-index:600;border-radius:6px;outline:3px solid #ffd15c;outline-offset:1px;animation:tutPulseYel .9s ease-in-out infinite;}
+  @keyframes tutPulseYel{0%,100%{box-shadow:0 0 0 3px rgba(255,209,92,.4),0 0 12px 3px rgba(255,209,92,.6);}50%{box-shadow:0 0 0 4px rgba(255,209,92,.75),0 0 22px 7px rgba(255,209,92,.95);}}
   @media (max-width:620px){
-    #tutBanner{flex-direction:column;gap:8px;padding:11px 12px;bottom:8px;}
+    #tutBanner{flex-direction:column;gap:8px;padding:11px 12px;top:6px;}
     .tut-btns{flex-direction:row;}
   }
 
@@ -1510,7 +1518,7 @@ function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 //  AURA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
 // ============================================================
 const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
-function addFury(n){ if(furyBlast) return; fury = Math.min(furyMax, fury + n); updateFuryUI(); }
+function addFury(n){ if(furyBlast || tutorial) return; fury = Math.min(furyMax, fury + n); updateFuryUI(); }
 function updateFuryUI(){
   const ready = fury >= furyMax && !over;
   furyFill.style.width = Math.round(fury/furyMax*100) + '%';
@@ -1578,38 +1586,52 @@ function useFury(){
 // ============================================================
 //  TUTORIAL (onboarding) — Dona Anna ensina num tabuleiro 6×6
 // ============================================================
-const TUT_MINES = [[0,3],[2,1],[3,4],[5,2],[1,5]];
-function tutReveal(r,c){ const g=grid[r]&&grid[r][c]; if(g && !g.revealed && !g.mine) revealCell(g,r,c); }
+const TUT_MINES = [[0,5],[1,4],[3,2],[4,4],[5,0]]; // tabuleiro pedagógico (dedução limpa)
+let tutPeeked = [];
+const pn = ()=> playerName || 'meu bem';
+function tutHlCell(r,c,cls){ const g=grid[r]&&grid[r][c]; if(g) g.el.classList.add(cls); }
+function tutPeek(cells){ cells.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(!g) return; g.el.classList.add('tut-peek'); if(!g.revealed && g.mine && g.hazard){ g.el.textContent=g.hazard.emoji; tutPeeked.push([r,c]); } }); }
+function tutShowFury(full){ document.getElementById('furyWrap').style.display=''; fury = full?furyMax:0; updateFuryUI(); }
 const TUT = [
-  { require:'next', text:'Oi, meu anjo! 👵 Sou a <b>Vovó Anna</b>. Vou te ensinar a cuidar do jardim comigo, bem devagarinho. Bora?' },
-  { require:'next', text:'O jardim tem casinhas cobertas 🟩. Algumas escondem <b>armadilhas</b> 🪤. Seu trabalho é <b>limpar todas as casas SEM armadilha</b>.' },
-  { require:'reveal:0,2', highlight:[[0,2]], text:'Pra limpar uma casa, é só <b>clicar</b> nela. Clique na casinha que está <b>piscando em verde</b> — pode confiar, é seguro! 👇' },
-  { require:'next', highlight:[[0,2]], text:'Apareceu um <b>número</b>! Cada número diz <b>quantas armadilhas 🪤 há nas casas vizinhas</b> (as 8 que encostam nela). Aqui é <b>1</b> → tem 1 armadilha bem pertinho.' },
-  { require:'next', highlight:[[0,3]], onEnter:()=>{ tutReveal(0,4); tutReveal(1,2); tutReveal(1,3); tutReveal(1,4); updateFuryUI(); }, text:'Deixa eu abrir aqui em volta pra te mostrar... 👀 Repara: essas casas têm números e a <b>única casa coberta no meio</b> delas é a que está piscando. É a <b>armadilha</b>! 🪤' },
-  { require:'flag:0,3', highlight:[[0,3],'#flagPalette'], text:'Vamos <b>MARCAR</b> pra não pisar sem querer: <b>arraste a bandeirinha 🚩</b> (do canto ➡) até a casa piscando. (No computador, também dá clique com o botão direito.)' },
-  { require:'next', text:'Isso, meu amor! 🚩 A armadilha ficou marcada. Marcou errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
-  { require:'next', highlight:['#mineCount'], text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
-  { require:'next', highlight:['#timer'], text:'O ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b> ganha!' },
-  { require:'next', highlight:['#furyWrap'], text:'E esta barra ⚡ é a <b>AURA DA VOVÓ</b>, seu poder especial. Ela <b>enche com os números</b> que você vai revelando.' },
-  { require:'special', highlight:['#furyBtn'], onEnter:()=>{ fury=furyMax; updateFuryUI(); }, text:'Olha, encheu! Quando a barra <b>brilha</b>, aparece o botão. Aperte <b>USAR AURA DA VOVÓ</b>! ✨' },
-  { require:'next', text:'UAU! ☄️ Os <b>cometas</b> caíram e limparam o resto do jardim de uma vez só! Poder de vó não falha. 🌸' },
-  { require:'next', text:'Ah, uma dica: se você <b>travar pensando</b>, eu uso minha experiência e <b>pisco uma casa segura em verde</b> 🌿 pra te ajudar. Pode confiar!' },
-  { require:'next', text:'Sua <b>PONTUAÇÃO</b>: cada fase começa com pontos, você perde um tiquinho com o tempo, e <b>ganha por cada armadilha achada</b>. Rápido + caprichado = topo do <b>ranking</b>! 🏆' },
-  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, meu bem! Agora você já sabe cuidar do jardim comigo. Bora de verdade? 🌷👵' },
+  { require:'next', text:'Oi! 👵 Sou a <b>Vovó Anna</b>. Este jardim tá tomado de <b>mato</b> — as casinhas verdes 🟩 — e eu preciso da sua ajuda pra <b>limpar tudo</b>. Bora, {NAME}?' },
+  { require:'next', text:'Só que o mato <b>esconde armadilhas</b> 🪤. Você tem que limpar o jardim inteiro <b>sem me deixar cair</b> em nenhuma delas. Andar pelo jardim na minha idade já é uma aventura, né? 😅' },
+  { require:'reveal:0,0', highlight:[[0,0]], text:'Pra limpar o mato, é só <b>clicar</b> numa casinha. Clique na que está <b>piscando</b> ali no cantinho — pode confiar! 👇' },
+  { require:'next', text:'Olha só! ✨ Limpei uma <b>clareira</b> inteira de uma vez. Quando a gente arranca as raízes de uma casa <b>vazia</b>, as vizinhas limpas vêm juntinho. (Às vezes... às vezes não! Deixar o jardim bonito dá trabalho. 😄)' },
+  { require:'next', highlight:[[2,3]], text:'Repara nos <b>números</b> que apareceram. Cada número diz <b>quantas armadilhas 🪤 estão nas casinhas vizinhas</b> (as 8 ao redor). Um <b>2</b> = duas armadilhas coladas nele.' },
+  { require:'next', text:'Agora, {NAME}, respira e pensa uns <b>10 segundinhos</b> 🕰️: olhando os números, <b>quais casinhas COM CERTEZA têm armadilha?</b> E <b>quais COM CERTEZA são seguras?</b> Quando pensar, clique em <b>Próximo</b>.' },
+  { require:'next', onEnter:()=>{ tutHlCell(2,1,'tut-hl'); tutPeek([[3,2]]); }, text:'Vamos juntos! 🕵️ Olha aquele <b>1</b> piscando (verde): ele encosta em <b>uma única</b> casinha de mato. Se tem 1 armadilha e só 1 vizinha coberta... <b>é ali, sem dúvida!</b> 🪤 (viu o perigo por baixo?)' },
+  { require:'next', onEnter:()=>{ tutHlCell(3,1,'tut-hl'); tutHlCell(3,3,'tut-hl'); tutHlCell(4,2,'tut-hl'); }, text:'Agora as <b>SEGURAS</b> 🌿: aquele <b>1</b> já teve a armadilha dele achada. Como ele só precisava de uma, as <b>outras vizinhas de mato</b> (as que piscam) estão <b>livres</b>! Pode limpar sem medo. Muito bem, Dudu!... 😅 ai, me perdoa — <b>{NAME}</b>! Confundi com meu bisneto.' },
+  { require:'next', onEnter:()=>{ tutHlCell(0,3,'tut-hl'); tutHlCell(0,4,'tut-warn'); tutHlCell(1,4,'tut-warn'); }, text:'E tem as <b>DUVIDOSAS</b> 🤔 (amarelo): veja este <b>1</b> — ele encosta em <b>duas</b> casinhas de mato e a armadilha pode estar em <b>qualquer uma</b>. Aqui a gente <b>não crava</b>! Bom jardineiro <b>não chuta</b> — espera achar mais pistas. 🌱' },
+  { require:'next', text:'É assim que se joga <b>sem chutar</b>: cada número é uma pista. Quanto <b>maior e mais difícil</b> a fase, mais armadilhas e <b>números maiores</b> aparecem — e você vai ter que agir como <b>eu deveria</b> agir: com muuuito cuidado! 🐢' },
+  { require:'flag:3,2', highlight:[[3,2],'#flagPalette'], text:'Achamos uma armadilha — vamos <b>MARCAR</b> pra não pisar: <b>arraste a bandeirinha 🚩</b> (do canto ➡) até a casinha piscando. (No PC, clique com o botão direito também.)' },
+  { require:'next', text:'Isso! 🚩 Marcada. Marcou no lugar errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
+  { require:'next', highlight:[[4,2]], text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 (tipo essa) pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
+  { require:'next', highlight:['#mineCount'], onEnter:()=>{ $('#mineCount').style.visibility='visible'; }, text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
+  { require:'next', highlight:['#timer'], onEnter:()=>{ $('#timer').style.visibility='visible'; }, text:'E o ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b>! (Rapidinho, que os bisnetos estão chegando 😄)' },
+  { require:'next', highlight:['#furyWrap'], onEnter:()=>tutShowFury(false), text:'Agora meu segredo... ⚡ esta é a <b>AURA DA VOVÓ</b>! Eu sou muito sábia e tenho <b>poderes cósmicos</b> ✨ — continuar bebendo vinho toda noite comigo também te leva lá! 🍷 Ela <b>enche com os números</b> que você revela.' },
+  { require:'special', highlight:['#furyBtn'], onEnter:()=>tutShowFury(true), text:'Olha, encheu e <b>brilhou</b>! ✨ Quando isso acontece, aperte <b>USAR AURA DA VOVÓ</b>: ela faz uma <b>limpeza geral</b> no jardim pra te ajudar a avançar mais rápido! 🌟' },
+  { require:'next', text:'UAU! ☄️✨ A Aura fez uma limpeza geral e adiantou tudo! Poder cósmico não falha, né, querido {NAME}? 🌸' },
+  { require:'next', text:'Sobre a <b>PONTUAÇÃO</b> 🏆: quanto <b>maior e mais difícil</b> a fase, <b>mais pontos</b> ela vale! O cálculo é: <b>pontos-base da fase − o tempo + 50 por armadilha</b> que você achou. Rápido e caprichado = topo do <b>ranking</b>!' },
+  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo. Bora de verdade? (E se eu te chamar de Dudu sem querer, releva — na minha idade a gente confunde! 😄👵)' },
 ];
-function clearTutHl(){ document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl')); }
+function clearTutHl(){
+  document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
+  tutPeeked.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(g && !g.revealed) g.el.textContent=''; });
+  tutPeeked = [];
+}
 function tutGo(i){
   tutStep = i; const s = TUT[i]; if(!s) return endTutorial();
   clearTutHl();
   if(s.onEnter) s.onEnter();
-  document.getElementById('tutText').innerHTML = s.text;
+  document.getElementById('tutText').innerHTML = s.text.replace(/{NAME}/g, escapeHtml(pn()));
   (s.highlight||[]).forEach(h=>{
-    if(Array.isArray(h)){ const g=grid[h[0]]&&grid[h[0]][h[1]]; if(g) g.el.classList.add('tut-hl'); }
+    if(Array.isArray(h)){ tutHlCell(h[0],h[1],'tut-hl'); }
     else { const el=document.querySelector(h); if(el) el.classList.add('tut-hl'); }
   });
   const nx = document.getElementById('tutNext');
   nx.style.display = (s.require==='next') ? '' : 'none';
   nx.textContent = s.nextLabel || 'PRÓXIMO ▶';
+  document.getElementById('tutBanner').classList.toggle('acting', s.require!=='next'); // translúcido na hora de agir
 }
 function tutAdvance(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
 function startTutorial(){
@@ -1629,6 +1651,11 @@ function startTutorial(){
   }}
   TUT_MINES.forEach(([r,c])=>{ grid[r][c].mine=true; grid[r][c].hazard=pickHazard(); });
   computeAdj(); updateMineCount(); updateFuryUI();
+  // REVELAÇÃO PROGRESSIVA: começa só com o tabuleiro (painel/aura aparecem quando forem explicados)
+  $('#mineCount').style.visibility='hidden';
+  $('#timer').style.visibility='hidden';
+  document.getElementById('furyWrap').style.display='none';
+  document.getElementById('furyAura').classList.remove('on');
   hideAnna(); fitBoard();
   menuEl.style.display='none'; gameEl.style.display='flex'; overlayEl.style.display='none'; flagPalette.style.display='flex';
   document.getElementById('tutBanner').style.display='flex';
@@ -1636,7 +1663,10 @@ function startTutorial(){
 }
 function endTutorial(){
   tutorial=false; clearTutHl(); furyBlast=false;
-  document.getElementById('tutBanner').style.display='none';
+  $('#mineCount').style.visibility=''; $('#timer').style.visibility='';
+  document.getElementById('furyWrap').style.display='';
+  document.getElementById('furyAura').classList.remove('on');
+  const bn=document.getElementById('tutBanner'); bn.style.display='none'; bn.classList.remove('acting');
   goMenu();
 }
 
