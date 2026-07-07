@@ -161,9 +161,26 @@
   }
   .face:active{transform:translateY(3px);}
 
+  /* ===================== FÚRIA DA VOVÓ (especial) ===================== */
+  #furyWrap{width:100%;max-width:640px;margin:-8px 0 16px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .fury-row{display:flex;align-items:center;gap:10px;width:100%;}
+  .fury-lbl{font-size:12px;letter-spacing:1px;color:#ffb84a;white-space:nowrap;text-shadow:0 1px 0 #000;}
+  .fury-bar{flex:1;height:16px;background:#1c0d0d;border:2px solid #000;border-radius:9px;overflow:hidden;box-shadow:inset 0 2px 4px rgba(0,0,0,.7);}
+  #furyFill{height:100%;width:0%;border-radius:7px;background:linear-gradient(90deg,#ff7a2a,#ffd15c);transition:width .3s ease;}
+  #furyVal{font-family:"Courier New",monospace;font-size:13px;color:#ffb84a;min-width:46px;text-align:right;}
+  #furyWrap.ready .fury-bar{border-color:#ffd15c;animation:furyGlow .8s ease-in-out infinite;}
+  #furyWrap.ready #furyFill{background:linear-gradient(90deg,#ff4d2a,#ffe08a,#ff4d2a);background-size:200% 100%;animation:furyShift 1s linear infinite;}
+  @keyframes furyGlow{0%,100%{box-shadow:inset 0 2px 4px rgba(0,0,0,.7),0 0 6px rgba(255,180,40,.5);}50%{box-shadow:inset 0 2px 4px rgba(0,0,0,.7),0 0 20px 5px rgba(255,190,50,.95);}}
+  @keyframes furyShift{to{background-position:200% 0;}}
+  #furyBtn{animation:pop .4s ease;}
+  #cometLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:40;}
+  .comet{position:absolute;top:0;font-size:36px;filter:drop-shadow(0 0 10px rgba(255,180,60,.95));animation:cometFall linear forwards;}
+  @keyframes cometFall{from{transform:translateY(-16vh) rotate(24deg);opacity:0;}12%{opacity:1;}to{transform:translateY(115vh) rotate(24deg);opacity:.85;}}
+
   .board-wrap{
     perspective:1100px;perspective-origin:50% 24%;
     padding:10px 6px 40px;width:100%;display:flex;justify-content:center;
+    position:relative; /* ancora os cometas */
   }
   /* o tabuleiro é o JARDIM: canteiro de terra emoldurado */
   #board{
@@ -469,8 +486,17 @@
         <div class="face" id="faceBtn" title="Reiniciar">👵</div>
         <div class="counter time" id="timer" title="Tempo">000</div>
       </div>
+      <div id="furyWrap">
+        <div class="fury-row">
+          <span class="fury-lbl">⚡ FÚRIA DA VOVÓ</span>
+          <div class="fury-bar"><div id="furyFill"></div></div>
+          <b id="furyVal">0/35</b>
+        </div>
+        <button class="btn" id="furyBtn" style="display:none;">☄️ USAR FÚRIA DA VOVÓ</button>
+      </div>
       <div class="board-wrap">
         <div id="board"></div>
+        <div id="cometLayer"></div>
       </div>
       <div class="hint">Clique = revelar &nbsp;•&nbsp; marcar cilada: <b>arraste a 🚩</b> (➡) ou clique direito &nbsp;•&nbsp; <b>tocar numa bandeira = tirar</b></div>
       <div class="best" id="bestTime"></div>
@@ -581,14 +607,10 @@
 
 // ---------- CONFIG ----------
 const DIFFICULTIES = [
-  { id:'sede',      emoji:'🏡', name:'JARDIM DA FAZENDA DE SANTANA', meta:'9×9 · 10 perigos · base 1500', rows:9, cols:9, mines:10, start:1500,
-    build:{ br:2, bc:2, tone:'#7a5330', emojis:['🏡','🌾','🐄','🚜'] } },                   // fazendinha 2×2
-  { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500,
-    build:{ br:4, bc:4, tone:'#5f6b78', emojis:['🏢','🪟'] } },                             // prédio 4×4
-  { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos · base 3500', rows:16, cols:30, mines:70, start:3500,
-    build:{ br:4, bc:8, tone:'#9c8748', emojis:['🏛️','👑','🌹','🕯️'] } },                  // palácio 4×8
-  { id:'amazonia',  emoji:'🐍', name:'AMAZÔNIA', meta:'22×30 · 100 perigos · base 4500', rows:22, cols:30, mines:100, start:4500, snakeHeavy:true,
-    build:{ br:4, bc:8, tone:'#5c4326', emojis:['🛖','🪶','🔥','🏹'] } },                   // tenda indígena 4×8
+  { id:'sede',      emoji:'🏡', name:'JARDIM DA FAZENDA DE SANTANA', meta:'9×9 · 10 perigos · base 1500', rows:9, cols:9, mines:10, start:1500 },
+  { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500 },
+  { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos · base 3500', rows:16, cols:30, mines:70, start:3500 },
+  { id:'amazonia',  emoji:'🐍', name:'AMAZÔNIA', meta:'22×30 · 100 perigos · base 4500', rows:22, cols:30, mines:100, start:4500, snakeHeavy:true },
 ];
 
 // Perigos (minas). Cada um tem emoji + som próprio (sfx) + fala irônica de game over.
@@ -632,7 +654,8 @@ let revealedCount = 0;
 let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
-let clockOn = false; // relógio começa no 1º clique do jogador (minas já posicionadas no início)
+let clockOn = false; // (legado, não usado no modelo clássico)
+let fury = 0; const FURY_MAX = 35; let furyBlast = false; // especial "Fúria da Vovó" (barra 0–35)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
 const _ls = (()=>{ try{ return window.localStorage; }catch(e){ return null; } })();
@@ -858,10 +881,10 @@ function showSafeHint(){
 // AMBIENTE: de tempo em tempo (sem jogar), a vovó vai até a construção resmungar/fazer café
 let buildTO = null;
 function buildVisitDelay(){ return 20000 + Math.floor(Math.random()*10001); } // 20–30s
-function resetBuildVisit(){ clearTimeout(buildTO); if(over || !started || !blockBr) return; buildTO = setTimeout(annaVisitBuild, buildVisitDelay()); }
+function resetBuildVisit(){ clearTimeout(buildTO); if(over || !started) return; buildTO = setTimeout(annaVisitBuild, buildVisitDelay()); }
 function annaVisitBuild(){
-  if(over || !started || !blockBr) return;
-  const rr = blockTop + Math.floor(blockBr/2), cc = blockLeft + Math.floor(blockBc/2);
+  if(over || !started) return;
+  const rr = Math.floor(rows/2), cc = Math.floor(cols/2);           // vai ao centro do jardim resmungar
   const g = grid[rr] && grid[rr][cc];
   if(g && g.el){ moveAnnaToCell(g.el); sayAnna(pick(BUILD_TALK), 4200); }
   buildTO = setTimeout(annaVisitBuild, buildVisitDelay());
@@ -1093,44 +1116,18 @@ function startGame(){
       grid[r][c] = {mine:false, hazard:null, revealed:false, flagged:false, adj:0, blocked:false, el};
     }
   }
-  // CONSTRUÇÃO central (tema da fase) — área NÃO clicável, fica no meio
-  blockedCount = 0; blockBr = 0; blockBc = 0; blockTop = -1; blockLeft = -1;
-  const bd = cfg.build;
-  if(bd){
-    blockBr = bd.br; blockBc = bd.bc;
-    blockTop  = Math.floor((rows - bd.br)/2);
-    blockLeft = Math.floor((cols - bd.bc)/2);
-    for(let r=blockTop; r<blockTop+bd.br; r++) for(let c=blockLeft; c<blockLeft+bd.bc; c++){
-      const g = grid[r][c]; g.blocked = true; blockedCount++;
-      const el = g.el;
-      el.classList.add('build');
-      el.style.background = 'linear-gradient(160deg, rgba(255,255,255,.18), rgba(0,0,0,.30)), '+bd.tone;
-      const rr = r-blockTop, cc = c-blockLeft;
-      el.textContent = bd.emojis[(rr+cc)%bd.emojis.length];
-    }
-  }
-  // florzinhas decorativas em ~14% das moitas (só enfeite; nunca na construção)
+  blockedCount = 0; blockBr = 0; blockBc = 0; blockTop = -1; blockLeft = -1; // sem construções
+
+  // florzinhas decorativas em ~14% das moitas (só enfeite)
   const FLOWERS = ['🌷','🌼','🌸','🌻','🪻'];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-    if(grid[r][c].blocked) continue;
     if(Math.random()<0.14){
       const s = document.createElement('span');
       s.className='deco'; s.textContent = FLOWERS[Math.floor(Math.random()*FLOWERS.length)];
       grid[r][c].el.appendChild(s);
     }
   }
-  // ANEL DE DICAS: minas já no início (fora da construção e do anel) + números revelados em volta
-  const forbidden = new Set(), ring = new Set();
-  if(blockBr){
-    for(let r=blockTop;r<blockTop+blockBr;r++) for(let c=blockLeft;c<blockLeft+blockBc;c++){
-      forbidden.add(r+','+c); // sem minas na construção
-      forEachNeighbor(r,c,(nr,nc)=>{ if(!grid[nr][nc].blocked) ring.add(nr+','+nc); });
-    }
-  }
-  ring.forEach(k=>forbidden.add(k));                 // sem minas no anel (área descampada)
-  placeMines(forbidden);
-  ring.forEach(k=>{ const p=k.split(',').map(Number); revealCell(grid[p[0]][p[1]], p[0], p[1]); }); // revela os números iniciais
-  started = true;
+  fury = 0; furyBlast = false; updateFuryUI(); // reseta o especial Fúria da Vovó
 
   hideAnna();
   fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
@@ -1138,7 +1135,6 @@ function startGame(){
   gameEl.style.display='flex';
   overlayEl.style.display='none';
   flagPalette.style.display='flex'; // bandeirinha arrastável disponível
-  resetHelp(); resetBuildVisit(); // a vovó já fica impaciente enquanto você estuda o anel
 }
 
 // dimensiona a célula pra o tabuleiro caber; se não couber, ativa modo rolável (achatado)
@@ -1162,13 +1158,15 @@ function pickHazard(){
   return HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
 }
 
-// posiciona minas no INÍCIO, evitando a construção e o anel de dicas (forbidden = Set "r,c")
-function placeMines(forbidden){
+// posiciona minas DEPOIS do 1º clique (zona 3×3 segura em volta) — nunca morre de cara
+function placeMines(safeR, safeC){
+  const forbidden = new Set();
+  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++) forbidden.add((safeR+dr)+','+(safeC+dc));
   let placed=0;
   while(placed<mineTotal){
     const r = Math.floor(Math.random()*rows);
     const c = Math.floor(Math.random()*cols);
-    if(grid[r][c].mine || grid[r][c].blocked) continue;
+    if(grid[r][c].mine) continue;
     if(forbidden.has(r+','+c)) continue;
     grid[r][c].mine = true;
     grid[r][c].hazard = pickHazard();
@@ -1219,7 +1217,7 @@ function onReveal(r,c){
   if(cell.revealed) return;
   if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
-  if(!clockOn){ clockOn = true; startTimer(); if(cell.mine) relocateMine(r,c); } // relógio + 1ª jogada segura
+  if(!started){ started = true; placeMines(r,c); startTimer(); } // 1º clique posiciona minas (sempre seguro)
 
   moveAnnaToCell(cell.el); // a vovó caminha até a casa clicada
 
@@ -1248,6 +1246,7 @@ function revealCell(cell,r,c){
     cell.el.textContent = cell.hazard.emoji;
   }else if(cell.adj>0){
     cell.el.innerHTML = `<span class="n${cell.adj}">${cell.adj}</span>`;
+    addFury(cell.adj); // carrega a Fúria da Vovó com a soma dos números que aparecem
   }
 }
 
@@ -1297,7 +1296,7 @@ function onFlag(r,c){
 function loseGame(hitCell){
   over = true;
   stopTimer();
-  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell();
+  clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
   faceEl.textContent = '😵';
   setAnnaFace('😵'); annaBubble.classList.remove('show');
   playHazardSound(hitCell.hazard); // SOM ESPECÍFICO do perigo pisado
@@ -1325,7 +1324,7 @@ function checkWin(){
   if(revealedCount >= safe){
     over = true;
     stopTimer();
-    clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell();
+    clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearHintCell(); updateFuryUI();
     faceEl.textContent = '😎';
     setAnnaFace('😎');
     S.win();
@@ -1408,6 +1407,52 @@ function startTimer(){
 }
 function stopTimer(){ if(timerInt){ clearInterval(timerInt); timerInt=null; } }
 
+// ============================================================
+//  FÚRIA DA VOVÓ (especial) — carrega com a soma dos números; usa cometas
+// ============================================================
+const furyWrap=$('#furyWrap'), furyFill=$('#furyFill'), furyVal=$('#furyVal'), furyBtn=$('#furyBtn'), cometLayer=$('#cometLayer');
+function addFury(n){ if(furyBlast) return; fury = Math.min(FURY_MAX, fury + n); updateFuryUI(); }
+function updateFuryUI(){
+  const ready = fury >= FURY_MAX && !over;
+  furyFill.style.width = Math.round(fury/FURY_MAX*100) + '%';
+  furyVal.textContent = fury + '/' + FURY_MAX;
+  furyWrap.classList.toggle('ready', ready);
+  furyBtn.style.display = ready ? '' : 'none';
+}
+function dropComets(){
+  cometLayer.innerHTML='';
+  const emojis=['☄️','☄️','🌠'];
+  for(let i=0;i<18;i++){
+    const s=document.createElement('div'); s.className='comet';
+    s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left = Math.round(Math.random()*94) + '%';
+    s.style.fontSize = (26 + Math.round(Math.random()*22)) + 'px';
+    s.style.animationDuration = (0.7 + Math.random()*0.7).toFixed(2) + 's';
+    s.style.animationDelay = (Math.random()*0.55).toFixed(2) + 's';
+    cometLayer.appendChild(s);
+  }
+  setTimeout(()=>{ cometLayer.innerHTML=''; }, 1900);
+}
+function useFury(){
+  if(fury < FURY_MAX || over || !started) return;
+  furyBtn.style.display='none';
+  if(soundOn){ beep(160,0.5,'sawtooth',0.2,60); [660,880,1046].forEach((f,i)=>setTimeout(()=>beep(f,0.12,'triangle',0.15),120+i*90)); }
+  dropComets();
+  document.body.classList.add('screen-shake');
+  setTimeout(()=>document.body.classList.remove('screen-shake'), 600);
+  furyBlast = true;
+  setTimeout(()=>{
+    // cometas caem e abrem o mapa SÓ em áreas sem armadilhas
+    const safe=[];
+    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){ const g=grid[r][c]; if(!g.mine && !g.revealed && !g.flagged) safe.push([r,c]); }
+    for(let i=safe.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=safe[i]; safe[i]=safe[j]; safe[j]=t; }
+    const hits = Math.max(6, Math.round(safe.length*0.5));
+    for(let i=0;i<hits;i++){ const p=safe[i]; if(!grid[p[0]][p[1]].revealed) floodReveal(p[0],p[1]); }
+    furyBlast=false; fury=0; updateFuryUI();
+    checkWin(); // se ficou 100% limpo -> vitória; senão continua jogando
+  }, 650);
+}
+
 function bestKey(){ return 'donaAnna_best_'+cfg.id; }
 function saveBest(t){
   const cur = parseInt(LS.get(bestKey())||'0',10);
@@ -1480,6 +1525,7 @@ function goMenu(){ stopTimer(); hideAnna(); flagPalette.style.display='none'; ov
 $('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))){ S.click(); return; } S.click(); startGame(); };
 $('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
+$('#furyBtn').onclick  = ()=>{ S.click(); useFury(); };
 $('#soundToggle').onclick = $('#soundToggle2').onclick = ()=>toggleSound();
 $('#musicToggle').onclick = $('#musicToggle2').onclick = ()=>toggleMusic();
 $('#volDown').onclick = ()=>{ S.click(); applyMusicVol(musicVol-10); };
