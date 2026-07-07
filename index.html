@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DONA ANNA — A Caça aos Óculos</title>
+<title>Vovó Anna e os perigos do seu jardim</title>
 <style>
   /* ===================== BASE / TEMA GRUNGE FLIPERAMA ===================== */
   :root{
@@ -428,8 +428,8 @@
 <body>
 
   <h1 class="arcade-title">
-    <span class="l1">DONA ANNA</span>
-    <span class="l2">A CAÇA AOS ÓCULOS</span>
+    <span class="l1">VOVÓ ANNA</span>
+    <span class="l2">E OS PERIGOS DO SEU JARDIM</span>
   </h1>
 
   <div class="stage">
@@ -582,9 +582,9 @@
 // ---------- CONFIG ----------
 const DIFFICULTIES = [
   { id:'sede',      emoji:'🏡', name:'JARDIM DA FAZENDA DE SANTANA', meta:'9×9 · 10 perigos · base 1500', rows:9, cols:9, mines:10, start:1500,
-    build:{ br:4, bc:4, tone:'#7a5330', emojis:['🏡','🌾','🐄','🌻','🚜','🐖'] } },        // fazendinha 4×4
+    build:{ br:2, bc:2, tone:'#7a5330', emojis:['🏡','🌾','🐄','🚜'] } },                   // fazendinha 2×2
   { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500,
-    build:{ br:8, bc:2, tone:'#5f6b78', emojis:['🏢','🪟'] } },                             // prédio 8×2
+    build:{ br:4, bc:4, tone:'#5f6b78', emojis:['🏢','🪟'] } },                             // prédio 4×4
   { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos · base 3500', rows:16, cols:30, mines:70, start:3500,
     build:{ br:4, bc:8, tone:'#9c8748', emojis:['🏛️','👑','🌹','🕯️'] } },                  // palácio 4×8
   { id:'amazonia',  emoji:'🐍', name:'AMAZÔNIA', meta:'22×30 · 100 perigos · base 4500', rows:22, cols:30, mines:100, start:4500, snakeHeavy:true,
@@ -632,6 +632,7 @@ let revealedCount = 0;
 let timer = 0, timerInt = null;
 let soundOn = true, musicOn = true, musicVol = 45, playerName = '';
 let blockedCount = 0, blockTop = -1, blockLeft = -1, blockBr = 0, blockBc = 0; // construção central (não clicável)
+let clockOn = false; // relógio começa no 1º clique do jogador (minas já posicionadas no início)
 
 // ---------- ARMAZENAMENTO seguro (sandbox pode bloquear localStorage) ----------
 const _ls = (()=>{ try{ return window.localStorage; }catch(e){ return null; } })();
@@ -1070,7 +1071,7 @@ function buildMenu(){
 // ============================================================
 function startGame(){
   rows = cfg.rows; cols = cfg.cols; mineTotal = cfg.mines;
-  grid = []; started = false; over = false;
+  grid = []; started = false; over = false; clockOn = false;
   flagsUsed = 0; revealedCount = 0; timer = 0;
   stopTimer();
   faceEl.textContent = '👵';
@@ -1118,12 +1119,26 @@ function startGame(){
       grid[r][c].el.appendChild(s);
     }
   }
+  // ANEL DE DICAS: minas já no início (fora da construção e do anel) + números revelados em volta
+  const forbidden = new Set(), ring = new Set();
+  if(blockBr){
+    for(let r=blockTop;r<blockTop+blockBr;r++) for(let c=blockLeft;c<blockLeft+blockBc;c++){
+      forbidden.add(r+','+c); // sem minas na construção
+      forEachNeighbor(r,c,(nr,nc)=>{ if(!grid[nr][nc].blocked) ring.add(nr+','+nc); });
+    }
+  }
+  ring.forEach(k=>forbidden.add(k));                 // sem minas no anel (área descampada)
+  placeMines(forbidden);
+  ring.forEach(k=>{ const p=k.split(',').map(Number); revealCell(grid[p[0]][p[1]], p[0], p[1]); }); // revela os números iniciais
+  started = true;
+
   hideAnna();
   fitBoard(); // dimensiona as casas pra caber na tela (responsivo)
   menuEl.style.display='none';
   gameEl.style.display='flex';
   overlayEl.style.display='none';
   flagPalette.style.display='flex'; // bandeirinha arrastável disponível
+  resetHelp(); resetBuildVisit(); // a vovó já fica impaciente enquanto você estuda o anel
 }
 
 // dimensiona a célula pra o tabuleiro caber; se não couber, ativa modo rolável (achatado)
@@ -1147,29 +1162,42 @@ function pickHazard(){
   return HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
 }
 
-// posiciona minas DEPOIS do 1º clique (nunca morre de cara)
-function placeMines(safeR, safeC){
-  const forbidden = new Set();
-  for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
-    forbidden.add((safeR+dr)+','+(safeC+dc));
-  }
+// posiciona minas no INÍCIO, evitando a construção e o anel de dicas (forbidden = Set "r,c")
+function placeMines(forbidden){
   let placed=0;
   while(placed<mineTotal){
     const r = Math.floor(Math.random()*rows);
     const c = Math.floor(Math.random()*cols);
-    if(grid[r][c].mine) continue;
-    if(grid[r][c].blocked) continue;         // não põe perigo na construção
+    if(grid[r][c].mine || grid[r][c].blocked) continue;
     if(forbidden.has(r+','+c)) continue;
     grid[r][c].mine = true;
     grid[r][c].hazard = pickHazard();
     placed++;
   }
-  // calcular números vizinhos
+  computeAdj();
+}
+function computeAdj(){
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-    if(grid[r][c].mine) continue;
-    let n=0;
-    forEachNeighbor(r,c,(nr,nc)=>{ if(grid[nr][nc].mine) n++; });
+    if(grid[r][c].mine || grid[r][c].blocked){ grid[r][c].adj = 0; continue; }
+    let n=0; forEachNeighbor(r,c,(nr,nc)=>{ if(grid[nr][nc].mine) n++; });
     grid[r][c].adj = n;
+  }
+}
+// 1ª jogada segura: se o 1º clique cair numa mina, ela é realocada
+function relocateMine(r,c){
+  grid[r][c].mine = false; grid[r][c].hazard = null;
+  let nr, nc, guard=0;
+  do{ nr=Math.floor(Math.random()*rows); nc=Math.floor(Math.random()*cols); guard++; }
+  while((grid[nr][nc].mine || grid[nr][nc].blocked || grid[nr][nc].revealed || (nr===r&&nc===c)) && guard<9999);
+  grid[nr][nc].mine = true; grid[nr][nc].hazard = pickHazard();
+  computeAdj();
+  rerenderRevealed();
+}
+// re-desenha os números das casas já reveladas (após realocar uma mina)
+function rerenderRevealed(){
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const g = grid[r][c];
+    if(g.revealed && !g.mine && !g.blocked) g.el.innerHTML = g.adj>0 ? `<span class="n${g.adj}">${g.adj}</span>` : '';
   }
 }
 
@@ -1191,11 +1219,7 @@ function onReveal(r,c){
   if(cell.revealed) return;
   if(cell.flagged){ onFlag(r,c); return; } // tocar numa bandeira = tirar a bandeira (intuitivo p/ celular)
 
-  if(!started){
-    started = true;
-    placeMines(r,c);
-    startTimer();
-  }
+  if(!clockOn){ clockOn = true; startTimer(); if(cell.mine) relocateMine(r,c); } // relógio + 1ª jogada segura
 
   moveAnnaToCell(cell.el); // a vovó caminha até a casa clicada
 
