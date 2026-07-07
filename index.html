@@ -805,24 +805,28 @@ function idleComplain(){
 // AJUDA: após 60s sem LIMPAR uma casinha, aponta uma casa segura da borda (pisca verde)
 let helpTO = null;
 function clearHintCell(){ document.querySelectorAll('.cell.hint-safe').forEach(e=>e.classList.remove('hint-safe')); }
-function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, 60000); }
+function resetHelp(){ clearTimeout(helpTO); clearHintCell(); if(over || !started) return; helpTO = setTimeout(showSafeHint, 20000); }
 function showSafeHint(){
   if(over || !started) return;
-  const borda=[], qualquer=[];
+  // preferir casa VAZIA (adj 0 = sem número), que abre bastante espaço; de borda se possível
+  const vazBorda=[], vazQualquer=[], seguraQualquer=[];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
     const g = grid[r][c];
     if(g.mine || g.revealed || g.flagged) continue;
-    qualquer.push(g);
-    if(r===0 || r===rows-1 || c===0 || c===cols-1) borda.push(g);
+    seguraQualquer.push(g);
+    if(g.adj===0){
+      vazQualquer.push(g);
+      if(r===0 || r===rows-1 || c===0 || c===cols-1) vazBorda.push(g);
+    }
   }
-  const pool = borda.length ? borda : qualquer;
+  const pool = vazBorda.length ? vazBorda : (vazQualquer.length ? vazQualquer : seguraQualquer);
   if(!pool.length) return;
   const t = pool[Math.floor(Math.random()*pool.length)];
   clearHintCell();
   t.el.classList.add('hint-safe');
   moveAnnaToCell(t.el);
   sayAnna('Psiu... acho que por aqui é seguro limpar! 🌿', 5000, true); // balão VERDE
-  helpTO = setTimeout(showSafeHint, 30000); // reprograma se continuar parada
+  helpTO = setTimeout(showSafeHint, 20000); // reprograma a cada 20s se continuar parada
 }
 // reposiciona a vovó se a janela mudar de tamanho
 window.addEventListener('resize', ()=>{
