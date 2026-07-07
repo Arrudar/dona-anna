@@ -197,6 +197,20 @@
   #furyAura.on{opacity:1;animation:auraPulse 1.6s ease-in-out infinite;}
   @keyframes auraPulse{0%,100%{opacity:.5;}50%{opacity:1;}}
 
+  /* botão flutuante p/ reabrir o resultado depois de espiar o jardim (só após terminar a fase) */
+  #reopenResult{display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9993;
+    font-family:'Arial Black','Arial',sans-serif;font-weight:800;font-size:15px;letter-spacing:.5px;
+    color:#12210b;cursor:pointer;padding:12px 22px;border-radius:30px;border:2px solid #2c4a1a;
+    background:linear-gradient(180deg,#b6f08a,#7ec860);
+    box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 0 3px rgba(120,220,120,.35),0 0 22px 5px rgba(120,220,120,.5);
+    animation:reopenPulse 1.8s ease-in-out infinite;}
+  #reopenResult:hover{filter:brightness(1.08);}
+  #reopenResult:active{transform:translateX(-50%) translateY(1px);}
+  @keyframes reopenPulse{
+    0%,100%{box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 0 3px rgba(120,220,120,.3),0 0 18px 4px rgba(120,220,120,.4);}
+    50%{box-shadow:0 8px 22px rgba(0,0,0,.5),0 0 0 3px rgba(150,240,150,.6),0 0 32px 10px rgba(120,220,120,.7);}
+  }
+
   /* ===================== TUTORIAL ===================== */
   #tutBanner{display:none;position:fixed;left:50%;top:10px;bottom:auto;transform:translateX(-50%);
     width:min(680px,94vw);z-index:9992;align-items:center;gap:12px;
@@ -587,10 +601,14 @@
       <div class="panel-actions">
         <button class="btn green" id="nextBtn" style="display:none;">🌿 JOGAR NUM JARDIM MAIOR</button>
         <button class="btn" id="againBtn">↻ JOGAR DE NOVO</button>
+        <button class="btn ghost" id="peekBtn">👁️ VER O JARDIM</button>
         <button class="btn ghost" id="menuBtn">MENU</button>
       </div>
     </div>
   </div>
+
+  <!-- botão flutuante para reabrir o resultado depois de espiar o jardim -->
+  <button id="reopenResult">📋 VER RESULTADO ▲</button>
 
   <!-- ===================== RANKING ===================== -->
   <div id="rankOverlay">
@@ -1198,6 +1216,8 @@ function buildMenu(){
 //  INICIAR PARTIDA
 // ============================================================
 function startGame(){
+  resetTutorialUI();                 // garante que nenhum resquício do tutorial (balão/flag) vaze pra fase
+  $('#reopenResult').style.display='none';
   rows = cfg.rows; cols = cfg.cols; mineTotal = cfg.mines;
   grid = []; started = false; over = false; clockOn = false;
   flagsUsed = 0; revealedCount = 0; timer = 0;
@@ -1434,7 +1454,7 @@ function loseGame(hitCell){
       cell.el.textContent = '❌';
     }
   }
-  setTimeout(()=>endScreen(false, hitCell.hazard), 700);
+  setTimeout(()=>endScreen(false, hitCell.hazard), 2000); // deixa ~2s p/ o jogador ver onde pisou
 }
 
 function checkWin(){
@@ -1454,7 +1474,8 @@ function checkWin(){
       if(cell.mine){ cell.el.classList.add('flag','bloom'); cell.el.textContent = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)]; }
     }
     saveBest(timer);
-    setTimeout(()=>endScreen(true, null), 700);
+    setTimeout(()=>endScreen(true, null), 2000); // deixa ~2s p/ o jogador admirar o jardim florido
+
   }
 }
 
@@ -1491,6 +1512,7 @@ async function endScreen(win, hazard){
     `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
   $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
   $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div><div class="mr-loading">carregando…</div>';
+  $('#reopenResult').style.display='none';
   overlayEl.style.display='flex';
 
   // ---- rankings COMPARTILHADOS (Supabase): todos os tempos (nomes únicos) + hoje (todas as jogadas) ----
@@ -1763,7 +1785,7 @@ window.addEventListener('pointerup', dEnd);
 // ============================================================
 //  LIGAÇÕES DE UI
 // ============================================================
-function goMenu(){ resetTutorialUI(); stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
+function goMenu(){ resetTutorialUI(); $('#reopenResult').style.display='none'; stopTimer(); hideAnna(); flagPalette.style.display='none'; overlayEl.style.display='none'; gameEl.style.display='none'; menuEl.style.display='block'; renderMenu(); }
 $('#startBtn').onclick = ()=>{ if(!playerName){ openNamePopup(); return; } if(!unlockedSet.has(DIFFICULTIES.indexOf(cfg))){ S.click(); return; } S.click(); startGame(); };
 $('#backBtn').onclick  = ()=>{ S.click(); goMenu(); };
 $('#faceBtn').onclick  = ()=>{ S.click(); startGame(); };
@@ -1776,6 +1798,9 @@ $('#nameChange').onclick = ()=>{ S.click(); openNamePopup(); };
 $('#againBtn').onclick = ()=>{ S.click(); startGame(); };
 $('#nextBtn').onclick  = ()=>{ S.click(); const i=DIFFICULTIES.indexOf(cfg); if(i>=0 && i+1<DIFFICULTIES.length){ cfg=DIFFICULTIES[i+1]; startGame(); } };
 $('#menuBtn').onclick  = ()=>{ S.click(); goMenu(); };
+// espiar o jardim: minimiza o painel de resultado e mostra o botão flutuante p/ reabrir
+$('#peekBtn').onclick  = ()=>{ S.click(); overlayEl.style.display='none'; $('#reopenResult').style.display='block'; };
+$('#reopenResult').onclick = ()=>{ S.click(); $('#reopenResult').style.display='none'; overlayEl.style.display='flex'; };
 $('#rankBtn').onclick   = ()=>{ S.click(); renderRank(); $('#rankOverlay').style.display='flex'; };
 $('#rankClose').onclick = ()=>{ S.click(); $('#rankOverlay').style.display='none'; };
 
