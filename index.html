@@ -677,9 +677,11 @@
         <div class="rules-item"><div class="rt">↩️ TIRAR UMA BANDEIRA</div><div class="rd">Marcou no lugar errado? É só <b>tocar (clicar) na casa da bandeira</b> que ela sai. Simples assim.</div></div>
         <div class="rules-item"><div class="rt">⚡ AURA DA VOVÓ (especial)</div><div class="rd">A barra <b>Aura da Vovó</b> enche com os <b>números que você revela</b>. Quando enche, ela <b>brilha</b> e aparece o botão: use pra <b>cometas caírem ☄️</b> e limparem várias casas seguras de uma vez!</div></div>
         <div class="rules-item"><div class="rt">💯 PONTOS & RANKING</div><div class="rd">Cada fase tem uma pontuação-base; você <b>perde pontos com o tempo</b> e <b>ganha 50</b> por armadilha descoberta. Rapidez + capricho = topo do <b>ranking compartilhado</b>! A <b>1ª jogada é sempre segura</b>.</div></div>
+        <div class="rules-item" style="border-color:#5a7a2a;background:rgba(60,110,30,.18);"><div class="rt" style="color:#a6e06a;">🎓 SEU PRIMEIRO DIA COM A VOVÓ</div><div class="rd">Ler é fácil, mas jardinagem se aprende é <b>com a mão na terra</b>! 🌱 A Vovó Anna separou um <b>cantinho pequeno</b> pra te ensinar tudo com calma, passo a passo — e no fim <b>você limpa ele sozinha, de verdade</b>. É rapidinho, e ela <b>adora a companhia</b>. Bora treinar antes de encarar o jardim grande, meu bem? 👵💛</div></div>
       </div>
       <div class="panel-actions">
-        <button class="btn" id="rulesOk">▶ BORA PASSEAR!</button>
+        <button class="btn green" id="rulesTut">🎓 TREINAR COM A VOVÓ</button>
+        <button class="btn ghost" id="rulesOk">Já sei jardinar, bora! ▶</button>
       </div>
     </div>
   </div>
@@ -1685,6 +1687,18 @@ function loseByTime(){
   setTimeout(()=>endScreen(false, TIME_HAZARD), 2000);
 }
 
+// jardim limpo: cada armadilha (perigo) vira uma FLOR — usado na vitória normal E no fim do tutorial
+function bloomGarden(){
+  const WFLOWERS=['🌷','🌸','🌻','🌼','🌹','💐','🏵️','🌺'];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const cell = grid[r][c];
+    if(cell.mine){
+      const emoji = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)];
+      cell.el.classList.add('flag','bloom'); cell.el.textContent = emoji;
+      attachTip(cell.el, buildFlowerTip(emoji)); // balãozinho fofo da Vovó ao passar o mouse
+    }
+  }
+}
 function checkWin(){
   if(tutorial) return;                       // tutorial não tem vitória/derrota normal
   const safe = rows*cols - mineTotal - blockedCount; // construção não conta
@@ -1694,16 +1708,7 @@ function checkWin(){
     clearTimeout(idleTO); clearTimeout(helpTO); clearTimeout(buildTO); clearTimeout(strollTO); clearTimeout(joyTO); clearHintCell(); updateFuryUI();
     faceEl.textContent = '😎'; // carinha do placar (indicador de vitória)
     S.win();
-    // jardim limpo: os perigos viram FLORES (jardim lindo e florido)
-    const WFLOWERS=['🌷','🌸','🌻','🌼','🌹','💐','🏵️','🌺'];
-    for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-      const cell = grid[r][c];
-      if(cell.mine){
-        const emoji = WFLOWERS[Math.floor(Math.random()*WFLOWERS.length)];
-        cell.el.classList.add('flag','bloom'); cell.el.textContent = emoji;
-        attachTip(cell.el, buildFlowerTip(emoji)); // balãozinho fofo da Vovó ao passar o mouse
-      }
-    }
+    bloomGarden(); // jardim limpo: os perigos viram FLORES (jardim lindo e florido)
     startCelebration(); // a vovó fica feliz e sai saltitando pelo jardim florido (mapa todo)
     saveBest(timer);
     setTimeout(()=>endScreen(true, null), 2000); // deixa ~2s p/ o jogador admirar o jardim florido
@@ -1880,7 +1885,14 @@ function tutMineHit(cell,r,c){
 function tutCheckFinish(){
   if(!tutFree) return;
   const safe = rows*cols - mineTotal; // tutorial não tem construção
-  if(revealedCount >= safe){ tutFree = false; tutMaxStep = Math.max(tutMaxStep, tutStep+1); tutForward(); }
+  if(revealedCount >= safe){
+    tutFree = false;
+    try{ S.win(); }catch(_){}
+    bloomGarden();               // florir o jardim, igual no jogo normal
+    faceEl.textContent = '😎';
+    tutMaxStep = Math.max(tutMaxStep, tutStep+1);
+    tutForward();                // vai pro passo de PARABÉNS
+  }
 }
 const TUT = [
   { require:'next', text:'Oi! 👵 Sou a <b>Vovó Anna</b>. Este jardim tá tomado de <b>mato</b> — as casinhas verdes 🟩 — e eu preciso da sua ajuda pra <b>limpar tudo</b>. Bora, {NAME}?' },
@@ -1899,7 +1911,8 @@ const TUT = [
   { require:'next', text:'Perfeito, {NAME}! 🌷 Foi assim que a gente andou: cada número deu uma pista, você <b>marcou o perigo</b> e <b>limpou o seguro</b>. Muito bem, Dudu!... 😅 ai, perdão — <b>{NAME}</b>! Vira e mexe confundo com o Dudu, meu filho. 💛' },
   { require:'next', onEnter:()=>{ tutHlCell(0,3,'tut-hl'); tutHlCell(0,4,'tut-warn'); tutHlCell(1,4,'tut-warn'); }, text:'Mas cuidado com as <b>DUVIDOSAS</b> 🤔 (amarelo): veja este <b>1</b> — ele encosta em <b>duas</b> casinhas de mato e a armadilha pode estar em <b>qualquer uma</b>. Aqui a gente <b>não crava</b>! Bom jardineiro <b>não chuta</b> — espera achar mais pistas. 🌱' },
   { require:'next', text:'É assim que se joga <b>sem chutar</b>: cada número é uma pista. Quanto <b>maior e mais difícil</b> a fase, mais armadilhas e <b>números maiores</b> aparecem — e você vai ter que agir como <b>eu deveria</b> agir: com muuuito cuidado! 🐢' },
-  { require:'next', highlight:[[5,2]], text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 (tipo essa) pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
+  { require:'next', text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
+  { require:'reveal:2,4', highlight:[[2,4]], text:'Ó, tô piscando <b>essa aqui</b> agora! 🌿 Pode <b>limpar sem medo</b> — quando eu piscar uma casinha, é porque tá <b>garantida</b>. Vai lá, clica nela! 👇' },
   { require:'next', highlight:['#mineCount'], onEnter:()=>{ const h=document.querySelector('.hud'); if(h) h.style.visibility='visible'; $('#mineCount').style.visibility='visible'; }, text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
   { require:'next', highlight:['#timer'], onEnter:()=>{ $('#timer').style.visibility='visible'; }, text:'E o ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b>! (Rapidinho, que os bisnetos estão chegando 😄)' },
   { require:'next', highlight:['#furyWrap'], onEnter:()=>tutShowFury(false), text:'Agora meu segredo... ⚡ esta é a <b>AURA DA VOVÓ</b>! Eu sou muito sábia e tenho <b>poderes cósmicos</b> ✨ — continuar bebendo vinho toda noite comigo também te leva lá! 🍷 Ela <b>enche com os números</b> que você revela.' },
@@ -1907,7 +1920,7 @@ const TUT = [
   { require:'next', text:'UAU! ☄️✨ A Aura deu um <b>empurrão</b> e revelou um monte de casinhas de uma vez! Mas ó — ela não faz <b>tudo</b> sozinha: sobrou um <b>cantinho</b> do jardim pra <b>você</b> terminar. 🌸' },
   { require:'next', text:'Sobre a <b>PONTUAÇÃO</b> 🏆: quanto <b>maior e mais difícil</b> a fase, <b>mais pontos</b> ela vale! O cálculo é: <b>pontos-base da fase − o tempo + 50 por armadilha</b> que você achou. Rápido e caprichado = topo do <b>ranking</b>!' },
   { require:'finish', onEnter:()=>startTutFinish(), text:'Agora a <b>prova final</b>, {NAME}! 🌿 Termine de limpar o jardim <b>sozinha</b>, como num jogo de verdade: revele as casinhas <b>seguras</b> e marque 🚩 as <b>armadilhas</b> que faltam. Sem pressa — <b>use os números</b>! Tô aqui torcendo. 👵' },
-  { require:'next', nextLabel:'▶ BORA JOGAR DE VERDADE!', onEnter:()=>clearTutHl(), text:'🎉🌷 <b>PARABÉNS, {NAME}!</b> Você limpou o jardim <b>inteirinho, sozinha e sem chutar</b>! Agora que praticou, tá <b>pronta pra entrar no time da Vovó Anna</b> e cuidar dos jardins de verdade. Bora?! 😄👵' },
+  { require:'next', nextLabel:'▶ BORA JOGAR DE VERDADE!', onEnter:()=>clearTutHl(), text:'🎉🌷 <b>PARABÉNS, {NAME}! TRABALHO CONCLUÍDO!</b> Olha só o jardim: <b>limpo e todo florido</b> 🌸🌻 — cada armadilha virou uma flor! Você limpou <b>tudo, sozinha e sem chutar</b>. Agora que praticou, tá <b>pronta pra entrar no time da Vovó Anna</b> e cuidar dos jardins de verdade. Bora?! 😄👵' },
 ];
 function clearTutHl(){
   document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
@@ -2021,6 +2034,7 @@ const rulesEl = $('#rules');
 function openRules(){ rulesEl.style.display='flex'; const pnl=rulesEl.querySelector('.panel'); if(pnl) pnl.scrollTop=0; }
 function closeRules(){ rulesEl.style.display='none'; LS.set('donaAnna_rules_seen','1'); }
 $('#rulesOk').onclick  = ()=>{ S.click(); closeRules(); };
+$('#rulesTut').onclick = ()=>{ S.click(); closeRules(); startTutorial(); }; // logo após as regras, treina no tutorial
 $('#rulesBtn').onclick = ()=>{ S.click(); openRules(); };
 $('#tutBtn').onclick   = ()=>{ S.click(); startTutorial(); };
 $('#tutNext').onclick  = ()=>{ S.click(); tutAdvance(); };
