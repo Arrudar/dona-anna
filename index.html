@@ -1502,8 +1502,16 @@ function onReveal(r,c){
   if(over) return;
   const cell = grid[r][c];
   if(cell.blocked) return;                  // construção: não clicável
-  if(tutorial){                             // no tutorial, só a casa guiada da vez
-    if(!(TUT[tutStep] && TUT[tutStep].require==='reveal:'+r+','+c)) return;
+  if(tutorial){
+    if(tutFree){                            // prova final: jogo livre (e perdoável)
+      if(cell.revealed) return;
+      if(cell.flagged){ onFlag(r,c); return; } // tocar na bandeira = tirar
+      if(cell.mine) return tutMineHit(cell, r, c);
+      floodReveal(r,c); S.reveal(); updateMineCount(); tutCheckFinish();
+      return;
+    }
+    if(cell.flagged && tutFlaggable.has(r+','+c)){ onFlag(r,c); return; } // tirar a bandeira ensinada
+    if(!(TUT[tutStep] && TUT[tutStep].require==='reveal:'+r+','+c)) return; // fora disso, só a casa guiada da vez
     if(cell.revealed || cell.flagged) return;
     floodReveal(r,c); S.reveal(); updateMineCount(); tutAdvance();
     return;
@@ -1571,10 +1579,17 @@ function onFlag(r,c){
   if(over || !started) return;
   const cell = grid[r][c];
   if(cell.revealed || cell.blocked) return;
-  if(tutorial){                             // no tutorial, só marca a armadilha guiada
-    if(!(TUT[tutStep] && TUT[tutStep].require==='flag:'+r+','+c)) return;
+  if(tutorial){
+    if(tutFree || tutFlaggable.has(r+','+c)){ // marcar/desmarcar livre (prova final ou casa já ensinada)
+      cell.flagged = !cell.flagged;
+      if(cell.flagged){ cell.el.classList.add('flag'); cell.el.textContent='🚩'; flagsUsed++; S.flag(); }
+      else { cell.el.classList.remove('flag'); cell.el.textContent=''; flagsUsed--; S.unflag(); }
+      updateMineCount();
+      return;
+    }
+    if(!(TUT[tutStep] && TUT[tutStep].require==='flag:'+r+','+c)) return; // fora disso, só a armadilha guiada
     cell.flagged=true; cell.el.classList.add('flag'); cell.el.textContent='🚩'; flagsUsed++;
-    S.flag(); updateMineCount(); tutAdvance();
+    S.flag(); tutFlaggable.add(r+','+c); updateMineCount(); tutAdvance(); // libera pôr/tirar essa daqui pra frente
     return;
   }
   cell.flagged = !cell.flagged;
@@ -1822,8 +1837,8 @@ function useFury(){
     // próximas do que já foi descoberto (ordenadas por proximidade da fronteira).
     const safe = safeCellsByProximity();
     if(tutorial){
-      safe.forEach(p=>revealCell(grid[p[0]][p[1]], p[0], p[1])); // no tutorial, limpa TUDO
-      furyBlast=false; fury=0; furyRaw=0; updateFuryUI(); tutAdvance(); return;
+      TUT_AURA.forEach(([r,c])=>revealCell(grid[r][c], r, c)); // revela só a região difícil; deixa o resto (dedutível) pro jogador
+      furyBlast=false; fury=0; furyRaw=0; updateFuryUI(); updateMineCount(); tutAdvance(); return;
     }
     const low = 10; // elimina entre 10 e o máximo da Aura daquela fase
     const n = low + Math.floor(Math.random()*(furyMax-low+1)); // aleatório 10..furyMax
@@ -1838,12 +1853,35 @@ function useFury(){
 //  TUTORIAL (onboarding) — Dona Anna ensina num tabuleiro 6×6
 // ============================================================
 const TUT_MINES = [[0,5],[1,4],[3,2],[4,4],[5,0]]; // tabuleiro pedagógico (dedução limpa)
+// Aura do tutorial revela a região difícil (que exigiria lógica avançada); o resto fica
+// 100% dedutível por regra simples, pro jogador terminar sozinho na prova final.
+const TUT_AURA = [[0,4],[1,5],[2,4],[2,5],[3,4],[3,5],[4,5],[5,4],[5,5]];
 let tutPeeked = [];
+let tutFree = false;                 // prova final: jogo livre (revelar/marcar à vontade)
+const tutFlaggable = new Set();      // casas cuja bandeira o jogador pode pôr/tirar livremente
 let tutMaxStep = 0; // passo mais avançado já alcançado (fronteira) — habilita VOLTAR/AVANÇAR
 const pn = ()=> playerName || 'meu bem';
 function tutHlCell(r,c,cls){ const g=grid[r]&&grid[r][c]; if(g) g.el.classList.add(cls); }
 function tutPeek(cells){ cells.forEach(([r,c])=>{ const g=grid[r]&&grid[r][c]; if(!g) return; g.el.classList.add('tut-peek'); if(!g.revealed && !g.flagged && g.mine && g.hazard){ g.el.textContent=g.hazard.emoji; tutPeeked.push([r,c]); } }); }
 function tutShowFury(full){ document.getElementById('furyWrap').style.display=''; fury = full?furyMax:0; updateFuryUI(); }
+// PROVA FINAL: libera o jogo livre pro jogador terminar de limpar o mapa do tutorial
+function startTutFinish(){ tutFree = true; clearTutHl(); }
+// tutorial é perdoável: pisar numa armadilha mostra o erro, explica e re-cobre a casa
+function tutMineHit(cell,r,c){
+  cell.el.classList.add('open','boom'); cell.el.textContent = cell.hazard.emoji;
+  try{ S.boom(); }catch(_){}
+  document.body.classList.add('screen-shake');
+  setTimeout(()=>document.body.classList.remove('screen-shake'), 400);
+  document.getElementById('tutText').innerHTML =
+    `Opa, cuidado! 🪤 Aqui tava escondida uma <b>${escapeHtml(cell.hazard.name)}</b> — num jogo de verdade isso seria <b>Game Over</b> 😬. Confere os <b>números</b> antes de clicar: eles já avisam onde tem perigo. Vou cobrir de novo, tenta pelas casinhas que os números <b>garantem</b>. 💪`;
+  setTimeout(()=>{ cell.el.classList.remove('open','boom'); cell.el.textContent=''; }, 1000);
+}
+// venceu a prova final? (todas as seguras reveladas) -> avança pro PARABÉNS
+function tutCheckFinish(){
+  if(!tutFree) return;
+  const safe = rows*cols - mineTotal; // tutorial não tem construção
+  if(revealedCount >= safe){ tutFree = false; tutMaxStep = Math.max(tutMaxStep, tutStep+1); tutForward(); }
+}
 const TUT = [
   { require:'next', text:'Oi! 👵 Sou a <b>Vovó Anna</b>. Este jardim tá tomado de <b>mato</b> — as casinhas verdes 🟩 — e eu preciso da sua ajuda pra <b>limpar tudo</b>. Bora, {NAME}?' },
   { require:'next', text:'Só que o mato <b>esconde armadilhas</b> 🪤. Você tem que limpar o jardim inteiro <b>sem me deixar cair</b> em nenhuma delas. Andar pelo jardim na minha idade já é uma aventura, né? 😅' },
@@ -1854,17 +1892,22 @@ const TUT = [
   { require:'next', onEnter:()=>{ tutHlCell(2,1,'tut-hl'); tutPeek([[3,2]]); }, text:'Vamos juntos! 🕵️ Olha aquele <b>1</b> piscando (verde): ele encosta em <b>uma única</b> casinha de mato. Se tem 1 armadilha e só 1 vizinha coberta... <b>é ali, sem dúvida!</b> 🪤 (viu o perigo por baixo?)' },
   { require:'flag:3,2', highlight:[[3,2],'#flagPalette'], text:'Achou o perigo? Então <b>MARQUE</b> pra não pisar: <b>arraste a bandeirinha 🚩</b> (do canto ➡) até a casinha piscando. (No PC, clique com o botão direito também.)' },
   { require:'next', text:'Isso! 🚩 Marcada. Marcou no lugar errado? É só <b>tocar na bandeira</b> que ela sai. 😉' },
-  { require:'next', onEnter:()=>{ tutHlCell(3,1,'tut-hl'); tutHlCell(3,3,'tut-hl'); tutHlCell(4,2,'tut-hl'); }, text:'Agora as <b>SEGURAS</b> 🌿: aquele <b>1</b> já teve a armadilha dele marcada. Como ele só precisava de uma, as <b>outras vizinhas de mato</b> (as que piscam) estão <b>livres</b>! Pode limpar sem medo. Muito bem, Dudu!... 😅 ai, me perdoa — <b>{NAME}</b>! Confundi com o Dudu, meu filho — de vez em quando me embaraço com o nome dele.' },
-  { require:'next', onEnter:()=>{ tutHlCell(0,3,'tut-hl'); tutHlCell(0,4,'tut-warn'); tutHlCell(1,4,'tut-warn'); }, text:'E tem as <b>DUVIDOSAS</b> 🤔 (amarelo): veja este <b>1</b> — ele encosta em <b>duas</b> casinhas de mato e a armadilha pode estar em <b>qualquer uma</b>. Aqui a gente <b>não crava</b>! Bom jardineiro <b>não chuta</b> — espera achar mais pistas. 🌱' },
+  { require:'next', onEnter:()=>{ tutHlCell(3,1,'tut-hl'); tutHlCell(4,2,'tut-hl'); }, text:'Agora as <b>SEGURAS</b> 🌿! Cada número protege só <b>UMA</b> casinha. Olha os <b>dois piscando juntos</b>: aquele <b>1</b> de cima já teve a armadilha dele marcada 🚩 — então a <b>única</b> vizinha de mato que sobrou pra ele (a de baixo) está <b>livre</b>! 🌱' },
+  { require:'next', onEnter:()=>{ tutHlCell(2,2,'tut-hl'); tutHlCell(3,3,'tut-hl'); }, text:'E do <b>outro lado</b>, a mesma mágica: <b>este</b> outro <b>1</b> (piscando) também já tem a armadilha dele marcada — então <b>a vizinha dele</b> (a que pisca junto) também tá <b>segura</b>! Viu como cada 1 aponta pra <b>uma</b> casinha certinha? 😉' },
+  { require:'reveal:4,2', highlight:[[4,2]], text:'Bora limpar <b>você</b> mesma! 👇 Clique na <b>casinha segura</b> que está piscando pra arrancar o mato dela.' },
+  { require:'reveal:3,3', highlight:[[3,3]], text:'Isso! 🌿 Agora limpe a <b>outra segura</b>, que também tá piscando. Sentiu como o jardim vai <b>avançando</b>?' },
+  { require:'next', text:'Perfeito, {NAME}! 🌷 Foi assim que a gente andou: cada número deu uma pista, você <b>marcou o perigo</b> e <b>limpou o seguro</b>. Muito bem, Dudu!... 😅 ai, perdão — <b>{NAME}</b>! Vira e mexe confundo com o Dudu, meu filho. 💛' },
+  { require:'next', onEnter:()=>{ tutHlCell(0,3,'tut-hl'); tutHlCell(0,4,'tut-warn'); tutHlCell(1,4,'tut-warn'); }, text:'Mas cuidado com as <b>DUVIDOSAS</b> 🤔 (amarelo): veja este <b>1</b> — ele encosta em <b>duas</b> casinhas de mato e a armadilha pode estar em <b>qualquer uma</b>. Aqui a gente <b>não crava</b>! Bom jardineiro <b>não chuta</b> — espera achar mais pistas. 🌱' },
   { require:'next', text:'É assim que se joga <b>sem chutar</b>: cada número é uma pista. Quanto <b>maior e mais difícil</b> a fase, mais armadilhas e <b>números maiores</b> aparecem — e você vai ter que agir como <b>eu deveria</b> agir: com muuuito cuidado! 🐢' },
-  { require:'next', highlight:[[4,2]], text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 (tipo essa) pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
+  { require:'next', highlight:[[5,2]], text:'Ah, e se você <b>travar pensando</b> muito tempo (uns <b>30 a 40 segundinhos</b>), eu vou lá e <b>pisco uma casinha segura</b> 🌿 (tipo essa) pra te ajudar. Minha experiência <b>não falha</b> — e temos que terminar hoje, meus <b>bisnetinhos</b> vêm me visitar! 👶' },
   { require:'next', highlight:['#mineCount'], onEnter:()=>{ const h=document.querySelector('.hud'); if(h) h.style.visibility='visible'; $('#mineCount').style.visibility='visible'; }, text:'Agora o <b>painel</b> lá em cima. Este 🪤 mostra <b>quantas armadilhas ainda faltam achar</b> no jardim.' },
   { require:'next', highlight:['#timer'], onEnter:()=>{ $('#timer').style.visibility='visible'; }, text:'E o ⏱️ é o <b>tempo</b>. Quanto mais rápido você limpa, <b>mais pontos</b>! (Rapidinho, que os bisnetos estão chegando 😄)' },
   { require:'next', highlight:['#furyWrap'], onEnter:()=>tutShowFury(false), text:'Agora meu segredo... ⚡ esta é a <b>AURA DA VOVÓ</b>! Eu sou muito sábia e tenho <b>poderes cósmicos</b> ✨ — continuar bebendo vinho toda noite comigo também te leva lá! 🍷 Ela <b>enche com os números</b> que você revela.' },
   { require:'special', highlight:['#furyBtn'], onEnter:()=>tutShowFury(true), text:'Olha, encheu e <b>brilhou</b>! ✨ Quando isso acontece, aperte <b>USAR AURA DA VOVÓ</b>: ela faz uma <b>limpeza geral</b> no jardim pra te ajudar a avançar mais rápido! 🌟' },
-  { require:'next', text:'UAU! ☄️✨ A Aura fez uma limpeza geral e adiantou tudo! Poder cósmico não falha, né, querido {NAME}? 🌸' },
+  { require:'next', text:'UAU! ☄️✨ A Aura deu um <b>empurrão</b> e revelou um monte de casinhas de uma vez! Mas ó — ela não faz <b>tudo</b> sozinha: sobrou um <b>cantinho</b> do jardim pra <b>você</b> terminar. 🌸' },
   { require:'next', text:'Sobre a <b>PONTUAÇÃO</b> 🏆: quanto <b>maior e mais difícil</b> a fase, <b>mais pontos</b> ela vale! O cálculo é: <b>pontos-base da fase − o tempo + 50 por armadilha</b> que você achou. Rápido e caprichado = topo do <b>ranking</b>!' },
-  { require:'next', nextLabel:'▶ BORA JOGAR!', text:'Prontinho, {NAME}! 🌷 Agora você sabe cuidar do jardim comigo, sem chutar. Bora de verdade? 😄👵' },
+  { require:'finish', onEnter:()=>startTutFinish(), text:'Agora a <b>prova final</b>, {NAME}! 🌿 Termine de limpar o jardim <b>sozinha</b>, como num jogo de verdade: revele as casinhas <b>seguras</b> e marque 🚩 as <b>armadilhas</b> que faltam. Sem pressa — <b>use os números</b>! Tô aqui torcendo. 👵' },
+  { require:'next', nextLabel:'▶ BORA JOGAR DE VERDADE!', onEnter:()=>clearTutHl(), text:'🎉🌷 <b>PARABÉNS, {NAME}!</b> Você limpou o jardim <b>inteirinho, sozinha e sem chutar</b>! Agora que praticou, tá <b>pronta pra entrar no time da Vovó Anna</b> e cuidar dos jardins de verdade. Bora?! 😄👵' },
 ];
 function clearTutHl(){
   document.querySelectorAll('.tut-hl,.tut-peek,.tut-warn').forEach(e=>e.classList.remove('tut-hl','tut-peek','tut-warn'));
@@ -1874,6 +1917,7 @@ function clearTutHl(){
 function tutGo(i){
   tutStep = i; const s = TUT[i]; if(!s) return endTutorial();
   clearTutHl();
+  tutFree = false;             // desliga jogo livre por padrão; o passo 'finish' religa no onEnter
   if(s.onEnter) s.onEnter();
   document.getElementById('tutText').innerHTML = s.text.replace(/{NAME}/g, escapeHtml(pn()));
   (s.highlight||[]).forEach(h=>{
@@ -1892,7 +1936,7 @@ function tutBackStep(){ if(tutStep>0) tutGo(tutStep-1); }
 function tutForward(){ if(tutStep+1 < TUT.length) tutGo(tutStep+1); else endTutorial(); }
 function tutAdvance(){ tutMaxStep = Math.max(tutMaxStep, tutStep+1); tutForward(); }
 function startTutorial(){
-  tutorial = true; tutStep = 0; tutMaxStep = 0;
+  tutorial = true; tutStep = 0; tutMaxStep = 0; tutFree = false; tutFlaggable.clear();
   cfg = { id:'tut', name:'TUTORIAL', emoji:'🎓', rows:6, cols:6, mines:TUT_MINES.length, start:0 };
   rows=6; cols=6; mineTotal=TUT_MINES.length;
   grid=[]; started=true; over=false; clockOn=false; flagsUsed=0; revealedCount=0; timer=0; stopTimer();
