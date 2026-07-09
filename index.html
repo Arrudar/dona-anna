@@ -655,7 +655,7 @@
   <div id="rankOverlay">
     <div class="panel">
       <h2 class="win" id="rankTitle" style="font-size:26px;">🏆 RANKING</h2>
-      <div class="rank-sec-title">🏆 TOP 20 · TODOS OS TEMPOS</div>
+      <div class="rank-sec-title">🏆 TOP 10 · TODOS OS TEMPOS</div>
       <div class="rank-head"><span class="pos">#</span><span class="nm">Ajudante</span><span class="dv">Jardim</span><span class="sc">Pontuação</span><span class="tm">Tempo</span></div>
       <div id="rankListAll" class="ranklist"></div>
       <div class="rank-sec-title">☀️ HOJE · TODOS OS JOGADORES</div>
@@ -1318,7 +1318,7 @@ async function renderRank(){
   let allList, note='';
   if(allRaw===null){ allList = dedupeByName(noTest(loadRank())); note=' (local — sem conexão)'; }
   else { allList = dedupeByName(noTest(allRaw)); }
-  allList = allList.slice(0,20);
+  allList = allList.slice(0,10);
   $('#rankTitle').textContent = '🏆 RANKING' + note;
   elAll.innerHTML = allList.length ? rankRowsHTML(allList) : '<div class="rank-empty">Ninguém ainda. Seja a primeira! 🌷</div>';
   // HOJE (GMT-3): TODAS as jogadas de todos os jogadores de hoje (sem dedupe)
