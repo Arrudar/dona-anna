@@ -403,7 +403,7 @@
     animation:fadeIn .3s ease;
   }
   #rankOverlay .panel{max-width:520px;}
-  .rank-head,.rank-row{display:grid;grid-template-columns:28px 1fr 58px .9fr 52px 50px;gap:6px;align-items:center;
+  .rank-head,.rank-row{display:grid;grid-template-columns:28px 1fr 1fr 86px 50px;gap:6px;align-items:center;
     font-family:Georgia,serif;font-weight:normal;font-size:12px;padding:5px 8px;text-align:left;}
   .rank-row .nm,.rank-head .nm,.rank-row .dv,.rank-head .dv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .rank-row .tm,.rank-head .tm{font-size:11px;color:#5ad1ff;font-weight:bold;text-align:right;}
@@ -656,10 +656,10 @@
     <div class="panel">
       <h2 class="win" id="rankTitle" style="font-size:26px;">🏆 RANKING</h2>
       <div class="rank-sec-title">🏆 TOP 20 · TODOS OS TEMPOS</div>
-      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span><span class="tm">Tempo</span></div>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Ajudante</span><span class="dv">Jardim</span><span class="sc">Pontuação</span><span class="tm">Tempo</span></div>
       <div id="rankListAll" class="ranklist"></div>
       <div class="rank-sec-title">☀️ HOJE · TODOS OS JOGADORES</div>
-      <div class="rank-head"><span class="pos">#</span><span class="nm">Vovó</span><span class="dt">Dia</span><span class="dv">Passeio</span><span class="sc">Pontos</span><span class="tm">Tempo</span></div>
+      <div class="rank-head"><span class="pos">#</span><span class="nm">Ajudante</span><span class="dv">Jardim</span><span class="sc">Pontuação</span><span class="tm">Tempo</span></div>
       <div id="rankListToday" class="ranklist"></div>
       <div class="panel-actions" style="margin-top:14px;">
         <button class="btn" id="rankClose">VOLTAR</button>
@@ -751,10 +751,13 @@
 
 // ---------- CONFIG ----------
 const DIFFICULTIES = [
-  { id:'sede',      emoji:'🏡', name:'JARDIM DA FAZENDA DE SANTANA', meta:'9×9 · 10 perigos · base 1500', rows:9, cols:9, mines:10, start:1500 },
-  { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos · base 2500', rows:16, cols:16, mines:40, start:2500 },
-  { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos · base 3500', rows:16, cols:30, mines:70, start:3500 },
-  { id:'amazonia',  emoji:'🐍', name:'PERDIDOS NA AMAZÔNIA', meta:'22×30 · 100 perigos · base 4500', rows:22, cols:30, mines:100, start:4500, snakeHeavy:true },
+  { id:'sede',      emoji:'🏡', name:'JARDIM DA FAZENDA DE SANTANA', meta:'9×9 · 10 perigos', rows:9, cols:9, mines:10, start:1500 },
+  { id:'oriental',  emoji:'⛩️', name:'JARDIM ORIENTAL', meta:'12×12 · 20 perigos', rows:12, cols:12, mines:20, start:2000 },
+  { id:'aclima',    emoji:'🌳', name:'PARQUE DA ACLIMAÇÃO', meta:'16×16 · 40 perigos', rows:16, cols:16, mines:40, start:2500 },
+  { id:'ibira',     emoji:'🏞️', name:'PARQUE DO IBIRA', meta:'16×22 · 55 perigos', rows:16, cols:22, mines:55, start:3000 },
+  { id:'versalhes', emoji:'⛲', name:'JARDIM DE VERSALHES', meta:'16×30 · 70 perigos', rows:16, cols:30, mines:70, start:3500 },
+  { id:'inhotim',   emoji:'🎨', name:'INHOTIM', meta:'22×30 · 100 perigos', rows:22, cols:30, mines:100, start:4000 },
+  { id:'botanico',  emoji:'🪴', name:'JARDIM BOTÂNICO', meta:'25×35 · 130 perigos', rows:25, cols:35, mines:130, start:4500 },
 ];
 
 // Perigos (minas). Cada um tem emoji + som próprio (sfx) + fala irônica de game over.
@@ -1273,9 +1276,10 @@ function todayStartISO(){
   const d = new Date(Date.now() - 3*3600*1000); // desloca p/ o "relógio" de GMT-3
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 3, 0, 0)).toISOString();
 }
-async function sbToday(limit){
+async function sbToday(limit, diff){
   try{
-    const r = await fetch(SB_URL+`/scores?select=name,score,time,diff,created_at&created_at=gte.${todayStartISO()}&order=score.desc,created_at.asc&limit=${limit}`, { headers:SB_H });
+    const dq = diff ? `&diff=eq.${encodeURIComponent(diff)}` : ''; // opcional: só uma fase
+    const r = await fetch(SB_URL+`/scores?select=name,score,time,diff,created_at&created_at=gte.${todayStartISO()}${dq}&order=score.desc,created_at.asc&limit=${limit}`, { headers:SB_H });
     if(!r.ok) return null;
     return await r.json();
   }catch(err){ return null; }
@@ -1290,13 +1294,20 @@ function dedupeByName(list){
 function rankRowsHTML(list){
   return list.map((e,i)=>
     `<div class="rank-row"><span class="pos">${i+1}º</span><span class="nm">${escapeHtml(e.name)}</span>`+
-    `<span class="dt">${fmtDate(e.when||e.created_at)}</span><span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span><span class="tm">${fmtTime(e.time||0)}</span></div>`
+    `<span class="dv">${escapeHtml(e.diff)}</span><span class="sc">${e.score}</span><span class="tm">${fmtTime(e.time||0)}</span></div>`
   ).join('');
 }
 function miniRows(list){
   return list.map((e,i)=>
     `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
     `<span class="mr-dv">${escapeHtml(e.diff)} · ${fmtDate(e.when||e.created_at)}</span><span class="mr-sc">${e.score}</span></div>`
+  ).join('');
+}
+// linhas do "top 3 de hoje NESTA fase" — como é tudo a mesma fase, mostramos o tempo da partida
+function miniRowsToday(list){
+  return list.map((e,i)=>
+    `<div class="mr-row"><span>${i+1}º</span><span class="mr-nm">${escapeHtml(e.name)}</span>`+
+    `<span class="mr-dv">⏱ ${fmtTime(e.time||0)}</span><span class="mr-sc">${e.score}</span></div>`
   ).join('');
 }
 async function renderRank(){
@@ -1432,7 +1443,7 @@ function fitBoard(){
   if(wrap) wrap.classList.toggle('scrollmode', boardW > vw - 40); // não coube -> rola horizontal
 }
 
-// sorteia o perigo de uma mina; na Amazônia, ~75% são cobras 🐍
+// sorteia o perigo de uma mina; fases com snakeHeavy: ~75% são cobras 🐍
 function pickHazard(){
   if(cfg.snakeHeavy && Math.random() < 0.75) return HAZARDS[0]; // HAZARDS[0] = cobra
   return HAZARDS[Math.floor(Math.random()*HAZARDS.length)];
@@ -1775,25 +1786,25 @@ async function endScreen(win, hazard){
   $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
     `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
-  $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 3 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
-  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 3 DE HOJE</div><div class="mr-loading">carregando…</div>';
+  $('#endRankAll').style.display='none'; $('#endRankAll').innerHTML=''; // fim enxuto: sem ranking de todos os tempos
+  $('#endRankToday').innerHTML = `<div class="mr-title">☀️ TOP 3 DE HOJE · ${escapeHtml(cfg.name)}</div><div class="mr-loading">carregando…</div>`;
   $('#reopenResult').style.display='none';
   hideCellTip();
   overlayEl.style.display='flex';
 
-  // ---- rankings COMPARTILHADOS (Supabase): todos os tempos (nomes únicos) + hoje (todas as jogadas) ----
+  // ---- ranking do DIA para ESTA fase (Supabase) + posição de quem acabou de jogar ----
   await sbInsert(entry);
-  const allRaw = await sbAll(1000), todayRaw = await sbToday(500);
-  const shared = (allRaw !== null);
-  const uniqAll = dedupeByName(noTest(shared ? allRaw : loadRank()));
-  const rank = uniqAll.findIndex(e => e.name === entry.name) + 1;
-  const posText = shared ? (rank>0 ? `${rank}º no mundo 🌍` : '—') : `${rank>0?rank:localPos}º (local, offline)`;
-  const posEl = $('#endPos'); if(posEl) posEl.textContent = posText;
+  const todayRaw = await sbToday(500, cfg.name); // só as jogadas de HOJE nesta fase
+  const shared = (todayRaw !== null);
+  const src = shared ? noTest(todayRaw) : noTest(loadRank().filter(e => e.id===cfg.id));
+  // já vem ordenado por pontuação (desc) pela query; ordena mesmo assim p/ o fallback local
+  const phaseToday = src.slice().sort((a,b)=> (b.score-a.score) || ((a.time||0)-(b.time||0)));
+  const myRank = phaseToday.filter(e => e.score > cs.score).length + 1; // ranqueamento por pontuação (empates dividem)
+  const posEl = $('#endPos'); if(posEl) posEl.textContent = `${myRank}º hoje` + (shared ? ' ☀️' : ' (local)');
 
-  $('#endRankAll').innerHTML = `<div class="mr-title">🏆 TOP 3 · TODOS OS TEMPOS${shared?'':' (local)'}</div>` + miniRows(uniqAll.slice(0,3));
-  const todayList = (shared && todayRaw!==null) ? noTest(todayRaw) : [];
-  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 3 DE HOJE</div>' +
-    (todayList.length ? miniRows(todayList.slice(0,3)) : '<div class="mr-loading">ninguém hoje ainda 🌅</div>');
+  $('#endRankToday').innerHTML =
+    `<div class="mr-title">☀️ TOP 3 DE HOJE · ${escapeHtml(cfg.name)}${shared?'':' (local)'}</div>` +
+    (phaseToday.length ? miniRowsToday(phaseToday.slice(0,3)) : '<div class="mr-loading">você é a primeira hoje! 🌅</div>');
 }
 
 // ============================================================
