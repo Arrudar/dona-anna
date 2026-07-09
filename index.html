@@ -237,6 +237,20 @@
   @media (max-width:620px){
     #tutBanner{flex-direction:column;gap:8px;padding:11px 12px;top:6px;}
     .tut-btns{flex-direction:row;}
+    /* tela de fim mais enxuta no celular */
+    #overlay .panel{padding:14px 16px 0;}
+    .panel .big-emoji{font-size:48px;}
+    .panel h2{font-size:22px;margin:4px 0 4px;}
+    .panel .quip{font-size:13.5px;line-height:1.4;margin:4px 0 10px;}
+    .panel .stat,#endResult{font-size:13px;margin-bottom:2px;}
+    .mini-detail{margin:2px 0 8px;}
+    .mini-rank{padding:6px 8px;margin-bottom:8px;}
+    .mini-rank .mr-title{margin-bottom:3px;}
+    .mini-rank .mr-row{padding:2px 0;font-size:11.5px;}
+    .scene{margin:2px 0 8px;}
+    .scene .art{font-size:30px;}
+    #overlay .panel-actions{gap:8px;padding:10px 0 12px;}
+    #overlay .panel-actions .btn{padding:9px 12px;font-size:13px;}
   }
 
   .board-wrap{
@@ -365,6 +379,20 @@
   }
   .panel .stat{font-size:13px;color:#a3906c;font-family:Georgia,serif;font-weight:normal;margin-bottom:16px;}
   .panel-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+  /* fim de rodada: painel cabe em qualquer tela; botões SEMPRE visíveis (barra fixa) */
+  #overlay{padding:12px;}
+  #overlay .panel{
+    display:flex;flex-direction:column;overflow-y:auto;
+    max-height:calc(100dvh - 24px);
+    padding:20px 22px 0;
+  }
+  #overlay .panel > *{flex:0 0 auto;}
+  #overlay .panel-actions{
+    position:sticky;bottom:0;z-index:2;margin-top:4px;
+    padding:12px 0 14px;gap:10px;
+    background:linear-gradient(180deg,rgba(20,13,7,0),#140d07 42%);
+  }
 
   .credits{margin-top:18px;font-size:11px;color:#6f5c3e;font-family:Georgia,serif;font-weight:normal;letter-spacing:1px;text-align:center;}
 
@@ -1747,8 +1775,8 @@ async function endScreen(win, hazard){
   $('#endResult').innerHTML = `Sua partida: <b style="color:#8fd06a">${cs.score} pts</b> · <span id="endPos" style="color:var(--amber)">salvando… 🌐</span>`;
   $('#endDetail').textContent =
     `Base ${cfg.start} − ${timer}s + ${cs.discovered}×50 achadas` + (cs.notDisc ? ` − ${cs.notDisc}×100 perdidas` : '');
-  $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
-  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div><div class="mr-loading">carregando…</div>';
+  $('#endRankAll').innerHTML = '<div class="mr-title">🏆 TOP 3 · TODOS OS TEMPOS</div><div class="mr-loading">carregando…</div>';
+  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 3 DE HOJE</div><div class="mr-loading">carregando…</div>';
   $('#reopenResult').style.display='none';
   hideCellTip();
   overlayEl.style.display='flex';
@@ -1762,10 +1790,10 @@ async function endScreen(win, hazard){
   const posText = shared ? (rank>0 ? `${rank}º no mundo 🌍` : '—') : `${rank>0?rank:localPos}º (local, offline)`;
   const posEl = $('#endPos'); if(posEl) posEl.textContent = posText;
 
-  $('#endRankAll').innerHTML = `<div class="mr-title">🏆 TOP 5 · TODOS OS TEMPOS${shared?'':' (local)'}</div>` + miniRows(uniqAll.slice(0,5));
+  $('#endRankAll').innerHTML = `<div class="mr-title">🏆 TOP 3 · TODOS OS TEMPOS${shared?'':' (local)'}</div>` + miniRows(uniqAll.slice(0,3));
   const todayList = (shared && todayRaw!==null) ? noTest(todayRaw) : [];
-  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 10 DE HOJE</div>' +
-    (todayList.length ? miniRows(todayList.slice(0,10)) : '<div class="mr-loading">ninguém hoje ainda 🌅</div>');
+  $('#endRankToday').innerHTML = '<div class="mr-title">☀️ TOP 3 DE HOJE</div>' +
+    (todayList.length ? miniRows(todayList.slice(0,3)) : '<div class="mr-loading">ninguém hoje ainda 🌅</div>');
 }
 
 // ============================================================
